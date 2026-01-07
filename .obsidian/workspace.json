@@ -11,10 +11,14 @@
             "id": "1a09a2d00b55cda3",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "projets/ACCOUNT/us-3280/extraction-jira.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "Nouvel onglet"
+              "title": "extraction-jira"
             }
           }
         ]
@@ -180,7 +184,7 @@
       "markdown-importer:Ouvrir l'importateur Markdown": false
     }
   },
-  "active": "1a09a2d00b55cda3",
+  "active": "b79074474d91deaa",
   "lastOpenFiles": [
     "projets/ACCOUNT/us-2608/03-cas-test.md",
     "projets/ACCOUNT/us-2608/02-strategie-test.md",

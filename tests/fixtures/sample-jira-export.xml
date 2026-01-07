@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+    <channel>
+        <item>
+            <key>SPEX-2990</key>
+            <summary>Sample User Story for Testing</summary>
+            <link>https://jira.example.com/browse/SPEX-2990</link>
+            <description>
+                &lt;h1&gt;User Story&lt;/h1&gt;
+                &lt;p&gt;As a seller, I want to upload documentation, so that buyers can access it.&lt;/p&gt;
+                &lt;h2&gt;Acceptance Criteria&lt;/h2&gt;
+                &lt;ul&gt;
+                    &lt;li&gt;&lt;b&gt;Scenario: Upload a Valid File&lt;/b&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;b&gt;Scenario: Upload an Oversized File&lt;/b&gt;&lt;/li&gt;
+                &lt;/ul&gt;
+            </description>
+            <project>SPEX</project>
+            <labels>
+                <label>ALL_SCREENS</label>
+                <label>QA</label>
+            </labels>
+        </item>
+    </channel>
+</rss>
+

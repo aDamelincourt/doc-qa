@@ -1,0 +1,225 @@
+{
+  "main": {
+    "id": "37fb1293914d71d0",
+    "type": "split",
+    "children": [
+      {
+        "id": "c04a4cfe52c3f88b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "1a09a2d00b55cda3",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "projets/ACCOUNT/us-3239/03-cas-test.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "03-cas-test"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "e1a2fd6661d5dfff",
+    "type": "split",
+    "children": [
+      {
+        "id": "db9dfd9ae558b445",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b79074474d91deaa",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Explorateur de fichiers"
+            }
+          },
+          {
+            "id": "2a2afcaf8abe745f",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "5f12fff6f0f68975",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "a0ab42a4e67d233f",
+    "type": "split",
+    "children": [
+      {
+        "id": "b0b2622f3704cf24",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "8c1c57d3bef27604",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "projets/SPEX/us-2990/01-questions-clarifications.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for 01-questions-clarifications"
+            }
+          },
+          {
+            "id": "6a67ab3da078209d",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "projets/SPEX/us-2990/01-questions-clarifications.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from 01-questions-clarifications"
+            }
+          },
+          {
+            "id": "1b042f2b7e9fdf8c",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "fff7267bc4e70f50",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "9382fe40f60ab2d2",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "projets/SPEX/us-2990/01-questions-clarifications.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of 01-questions-clarifications"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Ouvrir le sélecteur rapide": false,
+      "graph:Ouvrir la vue graphique": false,
+      "canvas:Créer une nouvelle toile": false,
+      "daily-notes:Ouvrir la note quotidienne": false,
+      "templates:Insérer le modèle": false,
+      "command-palette:Ouvrir la palette de commandes": false,
+      "bases:Create new base": false,
+      "markdown-importer:Ouvrir l'importateur Markdown": false
+    }
+  },
+  "active": "1a09a2d00b55cda3",
+  "lastOpenFiles": [
+    "projets/ACCOUNT/us-3239/02-strategie-test.md",
+    "projets/ACCOUNT/us-3239/01-questions-clarifications.md",
+    "exports/01-questions-clarifications.pdf",
+    "exports/extraction-jira.pdf",
+    "exports/README.pdf",
+    "exports/03-cas-test.pdf",
+    "exports/02-strategie-test.pdf",
+    "projets/ACCOUNT/us-3239/extraction-jira.md",
+    "projets/ACCOUNT/us-3239/README.md",
+    "projets/ACCOUNT/us-3239/03-cas-test.md",
+    "projets/ACCOUNT/us-3182/01-questions-clarifications.md",
+    "REQUIS-PARALLÉLISATION.md",
+    "ANALYSE-OPTIMISATIONS.md",
+    "projets/MME/us-545/README.md",
+    "projets/MME/us-545/02-strategie-test.md",
+    "projets/MME/us-545/extraction-jira.md",
+    "projets/MME/us-545/03-cas-test.md",
+    "projets/MME/us-545/01-questions-clarifications.md",
+    "projets/SPEX/us-3143/02-strategie-test.md",
+    "projets/SPEX/us-3143/extraction-jira.md",
+    "projets/SPEX/us-3143/README.md",
+    "projets/SPEX/us-3143/03-cas-test.md",
+    "projets/SPEX/us-3143/01-questions-clarifications.md",
+    "projets/SPEX/us-2990/extraction-jira.md",
+    "projets/SPEX/us-2990/README.md",
+    "projets/SPEX/us-2990/03-cas-test.md",
+    "projets/SPEX/us-2990/01-questions-clarifications.md",
+    "projets/SPEX/us-2990/02-strategie-test.md",
+    "projets/DATA/us-3873/03-cas-test.md",
+    "projets/DATA/us-3873/02-strategie-test.md",
+    "projets/DATA/us-3873",
+    "projets/DATA/us-3872",
+    "projets/DATA",
+    "projets/EB/us-2253",
+    "projets/EB/us-2254"
+  ]
+}

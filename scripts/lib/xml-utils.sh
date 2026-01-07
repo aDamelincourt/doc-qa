@@ -182,6 +182,11 @@ parse_xml_file() {
                 # Utiliser le cache
                 log_debug "Utilisation du cache XML pour : $xml_file"
                 source "$cache_file"
+                # Décoder DESCRIPTION_SECTION depuis base64 si présent
+                if [ -n "${DESCRIPTION_SECTION_B64:-}" ]; then
+                    DESCRIPTION_SECTION=$(echo "$DESCRIPTION_SECTION_B64" | base64 -d 2>/dev/null || echo "")
+                    unset DESCRIPTION_SECTION_B64
+                fi
                 return 0
             fi
         fi
@@ -205,12 +210,21 @@ parse_xml_file() {
         local cache_file="$XML_CACHE_DIR/${cache_key}.cache"
         local cache_time_file="$XML_CACHE_DIR/${cache_key}.time"
         
+        # Échapper les caractères spéciaux pour le cache
+        # Utiliser base64 pour encoder DESCRIPTION_SECTION (contient du HTML/XML avec &lt; &gt; etc.)
+        # qui pourrait être interprété comme des commandes lors du source
+        local KEY_ESCAPED=$(printf '%q' "$KEY")
+        local TITLE_ESCAPED=$(printf '%q' "$TITLE")
+        local LINK_ESCAPED=$(printf '%q' "$LINK")
+        local PROJECT_NAME_ESCAPED=$(printf '%q' "$PROJECT_NAME")
+        local DESC_B64=$(echo -n "$DESCRIPTION_SECTION" | base64 2>/dev/null || echo "")
+        
         cat > "$cache_file" <<EOF
-KEY="$KEY"
-TITLE="$TITLE"
-LINK="$LINK"
-PROJECT_NAME="$PROJECT_NAME"
-DESCRIPTION_SECTION='$DESCRIPTION_SECTION'
+KEY=$KEY_ESCAPED
+TITLE=$TITLE_ESCAPED
+LINK=$LINK_ESCAPED
+PROJECT_NAME=$PROJECT_NAME_ESCAPED
+DESCRIPTION_SECTION_B64="$DESC_B64"
 EOF
         date +%s > "$cache_time_file" 2>/dev/null || true
         log_debug "Cache XML mis à jour pour : $xml_file"

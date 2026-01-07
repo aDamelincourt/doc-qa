@@ -1,0 +1,36 @@
+# Variables d'environnement (contient les tokens sensibles)
+.env
+.env.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Fichiers temporaires
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+
+# Fichiers de test
+test-results/
+*.test
+
+# Caches du projet
+/tmp/qa_*
+${TMPDIR:-/tmp}/qa_*
+
+# Exports CSV (optionnel - décommenter si vous ne voulez pas versionner les exports)
+# exports/*.csv
+
+# Historique (optionnel - décommenter si vous ne voulez pas versionner l'historique)
+# .history/*.json
+

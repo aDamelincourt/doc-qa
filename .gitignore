@@ -35,6 +35,6 @@ ${TMPDIR:-/tmp}/qa_*
 # .history/*.json
 
 # Documentation générée (contenu sensible/propriétaire)
-projets/
+projets/*
 !projets/README.md
 

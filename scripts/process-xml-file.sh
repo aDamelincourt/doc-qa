@@ -14,6 +14,7 @@ source "$LIB_DIR/xml-utils.sh"
 source "$LIB_DIR/processing-utils.sh"
 source "$LIB_DIR/ticket-utils.sh"
 source "$LIB_DIR/history-utils.sh"
+source "$LIB_DIR/acceptance-criteria-utils.sh"
 
 # Gestion des erreurs avec trap
 cleanup_on_error() {
@@ -142,8 +143,28 @@ if [ "$DRY_RUN" = "true" ]; then
     exit 0
 fi
 
-# Créer un fichier d'extraction structuré
+# Créer un fichier d'extraction structuré avec toutes les données extraites
 EXTRACTION_FILE="$US_DIR/extraction-jira.md"
+
+# Extraire toutes les informations supplémentaires
+STATUS=$(extract_status "$XML_FILE" 2>/dev/null || echo "")
+TYPE=$(extract_type "$XML_FILE" 2>/dev/null || echo "Story")
+PRIORITY=$(extract_priority "$XML_FILE" 2>/dev/null || echo "")
+
+# Extraire les critères d'acceptation
+ACCEPTANCE_CRITERIA=$(extract_acceptance_criteria "$XML_FILE" 2>/dev/null || echo "")
+
+# Extraire les liens Figma et Miro
+FIGMA_LINKS=$(extract_figma_links "$XML_FILE" 2>/dev/null || echo "")
+MIRO_LINKS=$(extract_miro_links "$XML_FILE" 2>/dev/null || echo "")
+
+# Extraire les commentaires formatés
+COMMENTS=$(extract_comments_formatted "$XML_FILE" 10 2>/dev/null || echo "")
+
+# Extraire la description décodée pour la User Story
+DESCRIPTION_DECODED=$(decode_html_cached "$DESCRIPTION_SECTION" 2>/dev/null || echo "$DESCRIPTION_SECTION")
+USER_STORY_SECTION=$(echo "$DESCRIPTION_DECODED" | awk '/USER STORY/i {found=1} found {print} /^<h[12]>/ && found && !/USER STORY/i {exit}' | head -50)
+
 cat > "$EXTRACTION_FILE" <<EOF
 # Extraction Jira - $KEY
 
@@ -151,33 +172,74 @@ cat > "$EXTRACTION_FILE" <<EOF
 
 **Clé du ticket** : $KEY
 **Titre/Summary** : $TITLE
-**Type** : Story
-**Statut** : [À extraire manuellement]
+**Type** : ${TYPE:-Story}
+**Statut** : ${STATUS:-[Non disponible]}
+**Priorité** : ${PRIORITY:-[Non disponible]}
 **Lien Jira** : $LINK
 
 ## 📝 Description / User Story
 
-\`\`\`
-$(echo "$DESCRIPTION" | head -100)
-\`\`\`
+$(if [ -n "$USER_STORY_SECTION" ]; then
+    echo "$USER_STORY_SECTION" | sed 's/<[^>]*>//g' | sed 's/&[^;]*;//g' | head -30
+else
+    echo "$DESCRIPTION_DECODED" | sed 's/<[^>]*>//g' | sed 's/&[^;]*;//g' | head -30
+fi)
 
 > **Note** : Description complète disponible dans le fichier XML : \`../Jira/$PROJECT_DIR/$TICKET_ID.xml\`
 
 ## ✅ Critères d'acceptation
 
-[À extraire manuellement depuis le XML - section Acceptance Criteria]
+$(if [ -n "$ACCEPTANCE_CRITERIA" ]; then
+    echo "$ACCEPTANCE_CRITERIA" | while IFS='|' read -r ac_num title given when then_clause; do
+        if [ -n "$ac_num" ] && [ -n "$title" ]; then
+            echo "### $ac_num - $title"
+            [ -n "$given" ] && echo "**Étant donné que** : $given"
+            [ -n "$when" ] && echo "**Lorsque** : $when"
+            [ -n "$then_clause" ] && echo "**Alors** : $then_clause"
+            echo ""
+        fi
+    done
+else
+    echo "*Aucun critère d'acceptation trouvé dans le XML*"
+fi)
 
 ## 💻 Informations techniques
 
-[À extraire manuellement depuis les commentaires du XML]
+$(if echo "$DESCRIPTION_DECODED" | grep -qi "SPECS TECHNIQUES\|SPECS\|Technical"; then
+    echo "$DESCRIPTION_DECODED" | awk '/SPECS TECHNIQUES/i || /SPECS/i || /Technical/i {found=1} found {print} /^<h[12]>/ && found && !/SPECS/i && !/Technical/i && !/Acceptance/i {exit}' | sed 's/<[^>]*>//g' | sed 's/&[^;]*;//g' | grep -v "^$" | head -30
+else
+    echo "*Aucune information technique trouvée dans la description*"
+fi)
 
 ## 🎨 Designs
 
-[À extraire manuellement depuis le XML - liens Figma]
+$(if [ -n "$FIGMA_LINKS" ]; then
+    echo "### Liens Figma"
+    echo "$FIGMA_LINKS" | while read -r link; do
+        echo "- $link"
+    done
+    echo ""
+fi)
+
+$(if [ -n "$MIRO_LINKS" ]; then
+    echo "### Liens Miro (Event Modeling)"
+    echo "$MIRO_LINKS" | while read -r link; do
+        echo "- $link"
+    done
+    echo ""
+fi)
+
+$(if [ -z "$FIGMA_LINKS" ] && [ -z "$MIRO_LINKS" ]; then
+    echo "*Aucun lien de design trouvé dans la description*"
+fi)
 
 ## 📝 Commentaires de l'équipe
 
-[À extraire manuellement depuis le XML - balise <comment>]
+$(if [ -n "$COMMENTS" ]; then
+    echo "$COMMENTS"
+else
+    echo "*Aucun commentaire trouvé dans le XML*"
+fi)
 
 ---
 

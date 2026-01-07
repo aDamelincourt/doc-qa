@@ -90,6 +90,100 @@ extract_comments() {
     awk '/<comments>/,/<\/comments>/' "$xml_file" | awk '/<comment/,/<\/comment>/' | head -"$max_lines"
 }
 
+# Extraire le statut
+# Usage: extract_status "/path/to/file.xml"
+extract_status() {
+    local xml_file="$1"
+    sed -n 's/.*<status[^>]*>\([^<]*\)<.*/\1/p' "$xml_file" | head -1
+}
+
+# Extraire le type
+# Usage: extract_type "/path/to/file.xml"
+extract_type() {
+    local xml_file="$1"
+    sed -n 's/.*<type[^>]*>\([^<]*\)<.*/\1/p' "$xml_file" | head -1
+}
+
+# Extraire la priorité
+# Usage: extract_priority "/path/to/file.xml"
+extract_priority() {
+    local xml_file="$1"
+    sed -n 's/.*<priority[^>]*>\([^<]*\)<.*/\1/p' "$xml_file" | head -1
+}
+
+# Extraire les liens Figma depuis la description
+# Usage: extract_figma_links "/path/to/file.xml"
+extract_figma_links() {
+    local xml_file="$1"
+    local description_section=$(awk '/<description>/,/<\/description>/' "$xml_file")
+    # Décoder les entités HTML d'abord
+    local decoded=$(echo "$description_section" | sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g; s/&quot;/"/g')
+    # Extraire depuis l'attribut href si présent, sinon depuis le texte
+    local href_links=$(echo "$decoded" | grep -oE 'href="https://www\.figma\.com/[^"]+"' | sed 's/href="//; s/"$//' | sed 's/&amp;/\&/g')
+    if [ -n "$href_links" ]; then
+        echo "$href_links" | sort -u
+    else
+        # Fallback : extraire depuis le texte
+        echo "$decoded" | grep -oE 'https://www\.figma\.com/[^"<>\s&"]+' | sed 's/&amp;/\&/g' | sed 's/&[^;]*;//g' | sort -u
+    fi
+}
+
+# Extraire les liens Miro depuis la description
+# Usage: extract_miro_links "/path/to/file.xml"
+extract_miro_links() {
+    local xml_file="$1"
+    local description_section=$(awk '/<description>/,/<\/description>/' "$xml_file")
+    # Décoder les entités HTML d'abord
+    local decoded=$(echo "$description_section" | sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g; s/&quot;/"/g')
+    # Extraire depuis l'attribut href si présent, sinon depuis le texte
+    local href_links=$(echo "$decoded" | grep -oE 'href="https://miro\.com/[^"]+"' | sed 's/href="//; s/"$//' | sed 's/&amp;/\&/g')
+    if [ -n "$href_links" ]; then
+        echo "$href_links" | sort -u
+    else
+        # Fallback : extraire depuis le texte
+        echo "$decoded" | grep -oE 'https://miro\.com/[^"<>\s&"]+' | sed 's/&amp;/\&/g' | sed 's/&[^;]*;//g' | sort -u
+    fi
+}
+
+# Extraire les commentaires décodés et formatés
+# Usage: extract_comments_formatted "/path/to/file.xml" [max_comments]
+extract_comments_formatted() {
+    local xml_file="$1"
+    local max_comments="${2:-10}"
+    local temp_file=$(mktemp)
+    
+    # Extraire les commentaires
+    awk '/<comments>/,/<\/comments>/' "$xml_file" | awk '/<comment/,/<\/comment>/' > "$temp_file"
+    
+    local count=0
+    while IFS= read -r line && [ $count -lt $max_comments ]; do
+        if echo "$line" | grep -q "<comment"; then
+            # Extraire l'auteur
+            local author=$(echo "$line" | sed -nE 's/.*author="([^"]*)".*/\1/p')
+            # Extraire la date
+            local created=$(echo "$line" | sed -nE 's/.*created="([^"]*)".*/\1/p')
+            # Extraire le contenu (entre <comment> et </comment>)
+            local content=$(echo "$line" | sed -nE 's/.*<comment[^>]*>(.*)<\/comment>.*/\1/p')
+            
+            if [ -n "$content" ]; then
+                # Décoder les entités HTML
+                content=$(echo "$content" | sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g; s/&quot;/"/g; s/&apos;/'"'"'/g')
+                # Nettoyer les balises HTML
+                content=$(echo "$content" | sed 's/<[^>]*>//g')
+                
+                if [ -n "$author" ] && [ -n "$content" ]; then
+                    echo "**$author** ($created):"
+                    echo "$content"
+                    echo ""
+                    count=$((count + 1))
+                fi
+            fi
+        fi
+    done < "$temp_file"
+    
+    rm -f "$temp_file"
+}
+
 # Valider qu'un fichier XML est valide (vérification basique)
 # Usage: validate_xml "/path/to/file.xml"
 # Optimisation: lecture unique du fichier pour toutes les vérifications

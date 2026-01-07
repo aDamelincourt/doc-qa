@@ -11,14 +11,10 @@
             "id": "1a09a2d00b55cda3",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "projets/ACCOUNT/us-2608/03-cas-test.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "03-cas-test"
+              "title": "Nouvel onglet"
             }
           }
         ]
@@ -186,11 +182,12 @@
   },
   "active": "1a09a2d00b55cda3",
   "lastOpenFiles": [
+    "projets/ACCOUNT/us-2608/03-cas-test.md",
     "projets/ACCOUNT/us-2608/02-strategie-test.md",
     "projets/ACCOUNT/us-2608/01-questions-clarifications.md",
-    "projets/ACCOUNT/us-2608/extraction-jira.md",
-    "projets/ACCOUNT/us-2608/03-cas-test.md",
     "projets/ACCOUNT/us-2608/README.md",
+    "projets/ACCOUNT/us-2608/extraction-jira.md",
+    "projets/ACCOUNT/us-2608",
     "projets/ACCOUNT/us-3239/03-cas-test.md",
     "projets/ACCOUNT/us-3239/02-strategie-test.md",
     "projets/ACCOUNT/us-3239/01-questions-clarifications.md",
@@ -216,11 +213,9 @@
     "projets/SPEX/us-3143/01-questions-clarifications.md",
     "projets/SPEX/us-2990/extraction-jira.md",
     "projets/SPEX/us-2990/README.md",
-    "projets/SPEX/us-2990/03-cas-test.md",
     "projets/DATA/us-3873",
     "projets/DATA/us-3872",
     "projets/DATA",
-    "projets/EB/us-2253",
-    "projets/EB/us-2254"
+    "projets/EB/us-2253"
   ]
 }

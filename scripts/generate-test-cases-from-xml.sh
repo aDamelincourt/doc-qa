@@ -202,7 +202,8 @@ set +e
     
     if echo "$DESCRIPTION_DECODED" | grep -qi "benefit\|benefits\|checkbox.*benefit\|Conversion rate\|Would you mention some benefits"; then
         IS_BENEFITS_FEATURE=true
-    elif echo "$DESCRIPTION_DECODED" | grep -qi "upload\|drag.*drop\|file.*documentation\|readme.*pdf"; then
+    elif echo "$DESCRIPTION_DECODED" | grep -qiE "upload.*documentation|documentation.*upload|drag.*drop.*file|readme.*pdf|upload.*readme|file.*upload.*documentation"; then
+        # Détection plus précise pour éviter les faux positifs (ex: "documentation technique" seule)
         IS_UPLOAD_FEATURE=true
     fi
     
@@ -643,7 +644,7 @@ Type de produit: Module ou Pack" \
 - ✅ Les checkboxes sont accessibles et cliquables sur toutes les tailles d'écran
 - ✅ Le texte et les labels sont lisibles
 - ✅ Aucune perte de fonctionnalité sur mobile/tablette"
-    else
+    elif [ "$IS_UPLOAD_FEATURE" = true ]; then
         # Scénario 13: Fonctionnement sur différents navigateurs (Upload)
         generate_test_case \
             "Fonctionnement sur différents navigateurs" \
@@ -672,6 +673,32 @@ Fichier: readme_fr.pdf" \
             "- ✅ La zone d'upload est visible et fonctionnelle sur toutes les résolutions
 - ✅ Le message informatif est lisible sur toutes les tailles d'écran
 - ✅ L'icône de suppression est accessible et cliquable
+- ✅ Aucune perte de fonctionnalité sur mobile/tablette"
+    else
+        # Scénario générique pour les autres fonctionnalités
+        generate_test_case \
+            "Fonctionnement sur différents navigateurs" \
+            "Ouvrir un navigateur (Chrome 120+, Firefox 115+, Safari 17+, Edge)" \
+            "Accéder à la fonctionnalité et tester son fonctionnement" \
+            "Le fonctionnement est identique sur tous les navigateurs testés" \
+            "Navigateur: Chrome 120+ / Firefox 115+ / Safari 17+ / Edge" \
+            "- ✅ La fonctionnalité fonctionne sur tous les navigateurs
+- ✅ L'affichage est identique
+- ✅ Aucune régression visuelle"
+        
+        # Scénario 14: Adaptation sur différentes tailles d'écran (Générique)
+        generate_test_case \
+            "Adaptation sur différentes tailles d'écran" \
+            "Ouvrir le navigateur et redimensionner la fenêtre à différentes résolutions" \
+            "Accéder à la fonctionnalité et tester son fonctionnement" \
+            "L'interface s'adapte correctement à chaque résolution et tous les éléments restent accessibles" \
+            "Résolutions:
+- Desktop: 1920x1080
+- Tablet: 768x1024
+- Mobile: 375x667" \
+            "- ✅ La fonctionnalité est visible et fonctionnelle sur toutes les résolutions
+- ✅ Tous les éléments sont accessibles et utilisables
+- ✅ Le texte et les labels sont lisibles
 - ✅ Aucune perte de fonctionnalité sur mobile/tablette"
     fi
     
@@ -708,7 +735,7 @@ Action: Tentative d'accès non autorisé" \
 - ✅ Aucune modification n'est possible sur les bénéfices d'un autre produit
 - ✅ Les données retournées par l'API sont filtrées par propriétaire
 - ✅ Les logs de sécurité enregistrent la tentative d'accès non autorisé"
-    else
+    elif [ "$IS_UPLOAD_FEATURE" = true ]; then
         # Scénario: Validation côté serveur des fichiers uploadés
         generate_test_case \
             "Validation côté serveur des fichiers uploadés" \
@@ -749,6 +776,32 @@ Action: Tentative d'accès non autorisé" \
 - ✅ Le fichier n'est pas téléchargeable même avec l'URL directe
 - ✅ Les données retournées par l'API sont filtrées par propriétaire
 - ✅ Les logs de sécurité enregistrent la tentative d'accès non autorisé"
+    else
+        # Scénarios de sécurité génériques pour les autres fonctionnalités
+        generate_test_case \
+            "Protection CSRF sur les formulaires" \
+            "Se connecter et obtenir un token CSRF valide" \
+            "Tenter de soumettre un formulaire depuis un site externe (sans token CSRF valide)" \
+            "La requête est rejetée et aucune action n'est effectuée" \
+            "Contexte: Site externe malveillant
+Méthode: POST sans token CSRF valide" \
+            "- ✅ La requête est rejetée avec une erreur 403 Forbidden
+- ✅ Aucune action n'est effectuée sur le serveur
+- ✅ Le token CSRF est requis et validé côté serveur
+- ✅ Les tentatives CSRF sont enregistrées dans les logs de sécurité"
+        
+        generate_test_case \
+            "Test d'autorisation - Accès aux données d'autres utilisateurs" \
+            "Se connecter en tant qu'utilisateur A" \
+            "Tenter d'accéder ou modifier des données appartenant à un autre utilisateur (utilisateur B) via manipulation d'URL ou API" \
+            "L'accès est refusé et aucune modification n'est possible" \
+            "Utilisateur A: Données ID 123
+Utilisateur B: Données ID 456
+Action: Tentative d'accès non autorisé" \
+            "- ✅ L'accès aux données d'un autre utilisateur est refusé (403 Forbidden)
+- ✅ Les données ne sont pas accessibles même avec l'URL directe
+- ✅ Les données retournées par l'API sont filtrées par propriétaire
+- ✅ Les logs de sécurité enregistrent la tentative d'accès non autorisé"
     fi
     
     # ========== CAS D'ACCESSIBILITÉ ==========
@@ -770,7 +823,7 @@ Lecteur d'écran: [si applicable]" \
 - ✅ L'ordre de tabulation est logique
 - ✅ Le focus est visible sur tous les éléments interactifs
 - ✅ Les labels sont correctement associés aux checkboxes"
-    else
+    elif [ "$IS_UPLOAD_FEATURE" = true ]; then
         # Scénario: Navigation complète au clavier (Upload)
         generate_test_case \
             "Navigation complète au clavier" \
@@ -784,6 +837,20 @@ Lecteur d'écran: [si applicable]" \
 - ✅ L'icône de suppression est accessible au clavier
 - ✅ L'ordre de tabulation est logique
 - ✅ Le focus est visible sur tous les éléments interactifs"
+    else
+        # Scénario: Navigation complète au clavier (Générique)
+        generate_test_case \
+            "Navigation complète au clavier" \
+            "Accéder à la fonctionnalité sans utiliser la souris" \
+            "Naviguer uniquement avec Tab/Enter/Espace pour accéder à tous les éléments interactifs et utiliser toutes les fonctionnalités" \
+            "Tous les éléments sont accessibles au clavier avec un ordre de tabulation logique et un focus visible" \
+            "Touches: Tab, Enter, Espace, Flèches
+Lecteur d'écran: [si applicable]" \
+            "- ✅ Tous les éléments interactifs sont accessibles via Tab
+- ✅ Les actions peuvent être déclenchées avec Enter ou Espace
+- ✅ L'ordre de tabulation est logique
+- ✅ Le focus est visible sur tous les éléments interactifs
+- ✅ Les labels sont correctement associés aux éléments"
     fi
     
     # Sections finales

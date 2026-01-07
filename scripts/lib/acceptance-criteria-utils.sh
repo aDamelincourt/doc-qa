@@ -20,61 +20,121 @@ extract_acceptance_criteria() {
     local decoded=$(echo "$description_section" | sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g; s/&quot;/"/g; s/&apos;/'"'"'/g; s/&#160;/ /g; s/&#233;/é/g; s/&#224;/à/g; s/&#232;/è/g; s/&#249;/ù/g; s/&#231;/ç/g; s/&#8211;/-/g; s/&#8212;/--/g; s/&#8217;/'"'"'/g')
     
     # Extraire la section "Acceptance Criteria" (jusqu'à la prochaine section h1/h2 ou fin)
-    local ac_section=$(echo "$decoded" | awk '/Acceptance Criteria/ {found=1} found {print} /^<h[12]>/ && found && !/Acceptance/ {exit}' | head -500)
-    
-    # Extraire les AC individuels depuis la section décodée
-    # Format dans XML: <p><b>AC.N - Titre</b><br/> Étant donné... Lorsque... Alors...</p>
-    local temp_file=$(mktemp)
-    
-    # Extraire chaque paragraphe contenant un AC
-    echo "$ac_section" | awk '
-    /<p>.*AC\.[0-9]+/ {
-        in_ac = 1
-        ac_text = $0
+    # Support des formats : "Acceptance Criteria" et "ACCEPTANCE CRITERIA"
+    # Ne pas s'arrêter aux autres sections h1 avant "Acceptance Criteria"
+    local ac_section=$(echo "$decoded" | awk '
+    BEGIN { in_ac_section = 0 }
+    /Acceptance Criteria/i { 
+        in_ac_section = 1
+        print
         next
     }
-    in_ac {
-        ac_text = ac_text " " $0
-        if (/<\/p>/) {
-            print ac_text
-            in_ac = 0
-            ac_text = ""
+    in_ac_section {
+        print
+        if (/^<h[12]>/ && !/Acceptance/i) {
+            exit
         }
-    }' > "$temp_file"
+    }' | head -500)
     
-    # Traiter chaque AC trouvé
-    while IFS= read -r ac_paragraph; do
-        if [ -z "$ac_paragraph" ]; then
-            continue
+    if [ -z "$ac_section" ]; then
+        return 1
+    fi
+    
+    # Extraire les AC individuels depuis la section décodée
+    # Format dans XML: 
+    #   <p><b><ins>AC 1 - Titre</ins></b></p>
+    #   <p><b>Etant donné que</b> texte<br/> <b>Lorsque</b> texte<br/> <b>Alors</b> texte</p>
+    local temp_file=$(mktemp)
+    local ac_results_file=$(mktemp)
+    
+    # Extraire les numéros et titres des AC dans un fichier temporaire
+    echo "$ac_section" | grep -E "AC[[:space:]]*[0-9]+|AC\.[0-9]+" > "$temp_file" || true
+    
+    # Pour chaque ligne avec un AC, extraire le numéro, le titre et le contenu
+    while IFS= read -r line; do
+        # Extraire le numéro AC (support "AC 1" et "AC.1")
+        local ac_num=$(echo "$line" | sed -nE 's/.*AC[[:space:]]*([0-9]+).*/\1/p' | head -1)
+        if [ -z "$ac_num" ]; then
+            ac_num=$(echo "$line" | sed -nE 's/.*AC\.([0-9]+).*/\1/p' | head -1)
         fi
-        
-        # Extraire le numéro AC
-        local ac_num=$(echo "$ac_paragraph" | sed -nE 's/.*AC\.([0-9]+).*/\1/p' | head -1)
         
         if [ -z "$ac_num" ]; then
             continue
         fi
         
-        # Extraire le titre (format: <b>AC.N - Titre</b>)
-        local title=$(echo "$ac_paragraph" | sed -E 's/.*<b>AC\.[0-9]+[[:space:]]*-[[:space:]]*([^<]*)<\/b>.*/\1/' | sed 's/<[^>]*>//g' | sed 's/&[^;]*;//g' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+        # Extraire le titre (entre "AC N -" et "</")
+        local title=$(echo "$line" | sed -nE 's/.*AC[[:space:]]*[0-9]+[[:space:]]*-[[:space:]]*([^<]+).*/\1/p' | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
         
         if [ -z "$title" ] || [ ${#title} -lt 3 ]; then
             title="Critère d'acceptation $ac_num"
         fi
         
-        # Extraire Given/When/Then depuis le paragraphe
-        local given=$(echo "$ac_paragraph" | grep -oE "Étant donné[^<]*|Etant donné[^<]*" | head -1 | sed 's/Étant donné[[:space:]]*que[[:space:]]*//i' | sed 's/Etant donné[[:space:]]*que[[:space:]]*//i' | sed 's/<[^>]*>//g' | sed 's/&[^;]*;//g' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | head -c 200)
+        # Trouver le contenu de l'AC (paragraphe suivant qui contient Given/When/Then)
+        # Utiliser awk pour trouver le paragraphe suivant "AC $ac_num"
+        local content=$(echo "$ac_section" | awk -v ac_num="$ac_num" '
+        BEGIN { 
+            in_target_ac = 0
+            content = ""
+            in_paragraph = 0
+        }
+        /AC[[:space:]]*'$ac_num'[[:space:]]*-/ { 
+            in_target_ac = 1
+            next
+        }
+        in_target_ac && /<p>/ {
+            in_paragraph = 1
+            content = $0
+            next
+        }
+        in_target_ac && in_paragraph {
+            content = content " " $0
+            if (/<\/p>/) {
+                if (content ~ /Etant donné|Étant donné|Lorsque|Alors/) {
+                    print content
+                    exit
+                }
+                in_paragraph = 0
+                content = ""
+            }
+        }
+        in_target_ac && /AC[[:space:]]*[0-9]+/ && !/AC[[:space:]]*'$ac_num'[[:space:]]*-/ {
+            exit
+        }
+        ' | head -1)
         
-        local when=$(echo "$ac_paragraph" | grep -oE "Lorsque[^<]*" | head -1 | sed 's/Lorsque[[:space:]]*//i' | sed 's/<[^>]*>//g' | sed 's/&[^;]*;//g' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | head -c 200)
-        
-        local then_clause=$(echo "$ac_paragraph" | grep -oE "Alors[^<]*" | head -1 | sed 's/Alors[[:space:]]*//i' | sed 's/<[^>]*>//g' | sed 's/&[^;]*;//g' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | head -c 200)
-        
-        if [ -n "$ac_num" ]; then
-            echo "AC.$ac_num|$title|$given|$when|$then_clause"
+        if [ -n "$content" ]; then
+            # Extraire Given/When/Then depuis le contenu
+            local given=$(echo "$content" | sed -nE 's/.*<b>Etant donné que<\/b>[[:space:]]*([^<]*)(<br\/>)?.*/\1/p' | head -1)
+            if [ -z "$given" ]; then
+                given=$(echo "$content" | sed -nE 's/.*<b>Étant donné que<\/b>[[:space:]]*([^<]*)(<br\/>)?.*/\1/p' | head -1)
+            fi
+            if [ -z "$given" ]; then
+                given=$(echo "$content" | grep -oE "Étant donné[^<]*|Etant donné[^<]*" | head -1 | sed 's/Étant donné[[:space:]]*que[[:space:]]*//i' | sed 's/Etant donné[[:space:]]*que[[:space:]]*//i')
+            fi
+            given=$(echo "$given" | sed 's/<[^>]*>//g' | sed 's/&[^;]*;//g' | sed 's/<br\/>//g' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | head -c 200)
+            
+            local when=$(echo "$content" | sed -nE 's/.*<b>Lorsque<\/b>[[:space:]]*([^<]*)(<br\/>)?.*/\1/p' | head -1)
+            if [ -z "$when" ]; then
+                when=$(echo "$content" | grep -oE "Lorsque[^<]*" | head -1 | sed 's/Lorsque[[:space:]]*//i')
+            fi
+            when=$(echo "$when" | sed 's/<[^>]*>//g' | sed 's/&[^;]*;//g' | sed 's/<br\/>//g' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | head -c 200)
+            
+            local then_clause=$(echo "$content" | sed -nE 's/.*<b>Alors<\/b>[[:space:]]*([^<]*)(<br\/>)?.*/\1/p' | head -1)
+            if [ -z "$then_clause" ]; then
+                then_clause=$(echo "$content" | grep -oE "Alors[^<]*" | head -1 | sed 's/Alors[[:space:]]*//i')
+            fi
+            then_clause=$(echo "$then_clause" | sed 's/<[^>]*>//g' | sed 's/&[^;]*;//g' | sed 's/<br\/>//g' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | head -c 200)
+            
+            echo "AC.$ac_num|$title|$given|$when|$then_clause" >> "$ac_results_file"
         fi
-    done < "$temp_file" | sort -t'|' -k1 -n
+    done < "$temp_file"
     
-    rm -f "$temp_file"
+    # Afficher le résultat trié
+    if [ -s "$ac_results_file" ]; then
+        sort -t'|' -k1 -n < "$ac_results_file"
+    fi
+    
+    rm -f "$temp_file" "$ac_results_file"
 }
 
 # Convertir un AC en scénario de test
@@ -120,4 +180,3 @@ ac_to_test_scenario() {
     
     echo "$title|$given|$when|$then_clause|$test_data|$expected_result"
 }
-

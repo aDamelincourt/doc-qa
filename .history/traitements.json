@@ -88,5 +88,11 @@
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/DATA/us-3873",
     "treatment_date": "2025-11-18 15:12:01",
     "last_update": "2025-11-18 15:12:01"
+  },
+  "ACCOUNT-2608": {
+    "ticket_key": "ACCOUNT-2608",
+    "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/ACCOUNT/us-2608",
+    "treatment_date": "2026-01-07 12:01:41",
+    "last_update": "2026-01-07 12:01:41"
   }
 }

@@ -50,6 +50,9 @@ log_info "   Ticket : $KEY"
 log_info "   Titre : $TITLE"
 echo ""
 
+# Extraire le numéro du ticket dès le début (nécessaire pour plusieurs usages)
+TICKET_NUMBER=$(get_ticket_number "$KEY")
+
 # Vérifier si le ticket a déjà été traité (via historique)
 if is_ticket_processed "$KEY"; then
     existing_info=$(get_treatment_info "$KEY")
@@ -88,7 +91,7 @@ fi
 # Créer la structure de dossiers si nécessaire
 if [ -z "$US_DIR" ]; then
     # Structure simplifiée : projets/PROJECT/us-XXXX (sans sous-dossiers)
-    TICKET_NUMBER=$(get_ticket_number "$KEY")
+    # TICKET_NUMBER est déjà défini plus haut
     US_DIR="$PROJETS_DIR/$PROJECT_DIR/us-$TICKET_NUMBER"
     
     # Vérifier les permissions d'écriture

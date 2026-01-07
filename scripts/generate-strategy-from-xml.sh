@@ -85,6 +85,10 @@ echo ""
 DESCRIPTION=$(awk '/<description>/,/<\/description>/' "$XML_FILE" | sed 's/<description>//; s/<\/description>//' | head -200)
 DESCRIPTION_DECODED=$(echo "$DESCRIPTION" | sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g; s/&quot;/"/g; s/&apos;/'"'"'/g' | tr -d '\n' | sed 's/<[^>]*>//g' | sed 's/  */ /g')
 
+# Définir DESCRIPTION_SECTION (utilisé pour l'analyse des scénarios)
+# Utiliser DESCRIPTION qui contient le HTML/XML brut pour détecter les patterns
+DESCRIPTION_SECTION="$DESCRIPTION"
+
 # Extraire la User Story
 USER_STORY=$(echo "$DESCRIPTION" | grep -i "as a\|i want\|so that" | head -1 | sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g; s/&quot;/"/g; s/&apos;/'"'"'/g' | sed 's/<[^>]*>//g' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
 
@@ -92,7 +96,7 @@ USER_STORY=$(echo "$DESCRIPTION" | grep -i "as a\|i want\|so that" | head -1 | s
 TITLE=$(grep "<summary>" "$XML_FILE" | sed 's/.*<summary>\([^<]*\)<.*/\1/')
 LINK=$(grep "<link>" "$XML_FILE" | sed 's/.*<link>\([^<]*\)<.*/\1/' | head -1)
 
-# Compter les scénarios (utiliser DESCRIPTION_SECTION déjà extrait)
+# Compter les scénarios (utiliser DESCRIPTION_SECTION)
 SCENARIOS_COUNT=$(echo "$DESCRIPTION_SECTION" | grep -i "scenario" | wc -l | tr -d ' ')
 
 # Identifier les types de scénarios (utiliser DESCRIPTION_SECTION et DESCRIPTION_DECODED)

@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "projets/ACCOUNT/us-2608/01-questions-clarifications.md",
+                "file": "projets/ACCOUNT/us-2608/03-cas-test.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "01-questions-clarifications"
+              "title": "03-cas-test"
             }
           }
         ]
@@ -186,15 +186,24 @@
   },
   "active": "1a09a2d00b55cda3",
   "lastOpenFiles": [
+    "projets/ACCOUNT/us-2608/02-strategie-test.md",
+    "projets/ACCOUNT/us-2608/03-cas-test.md",
+    "projets/ACCOUNT/us-2608/01-questions-clarifications.md",
+    "projets/MME/us-545/03-cas-test.md",
+    "projets/MME/us-545/extraction-jira.md",
+    "projets/ACCOUNT/us-2608/extraction-jira.md",
+    "projets/ACCOUNT/us-3239/extraction-jira.md",
+    "projets/ACCOUNT/us-3280/extraction-jira.md",
+    "projets/MME/us-1436/extraction-jira.md",
+    "projets/MME/us-1450/extraction-jira.md",
+    "projets/ACCOUNT/us-2608/README.md",
+    "scripts/generate-all-docs-for-all-us.sh",
+    "scripts/generate-all-docs-auto.sh",
+    "scripts/generate-docs-directly.sh",
+    "scripts/retreat-all-xml.sh",
     "GUIDE-CURSOR-IA.md",
     "scripts/generate-with-cursor-direct.sh",
     "FONCTIONNEMENT-PROJET.md",
-    "projets/ACCOUNT/us-2608/extraction-jira.md",
-    "projets/ACCOUNT/us-2608/01-questions-clarifications.md",
-    "projets/ACCOUNT/us-2608/02-strategie-test.md",
-    "projets/ACCOUNT/us-3280/extraction-jira.md",
-    "projets/ACCOUNT/us-2608/03-cas-test.md",
-    "projets/ACCOUNT/us-2608/README.md",
     "projets/ACCOUNT/us-2608",
     "projets/ACCOUNT/us-3239/03-cas-test.md",
     "projets/ACCOUNT/us-3239/02-strategie-test.md",
@@ -203,24 +212,15 @@
     "exports/extraction-jira.pdf",
     "exports/README.pdf",
     "exports/03-cas-test.pdf",
-    "exports/02-strategie-test.pdf",
-    "projets/ACCOUNT/us-3239/extraction-jira.md",
     "projets/ACCOUNT/us-3239/README.md",
     "projets/ACCOUNT/us-3182/01-questions-clarifications.md",
     "REQUIS-PARALLÉLISATION.md",
     "ANALYSE-OPTIMISATIONS.md",
     "projets/MME/us-545/README.md",
     "projets/MME/us-545/02-strategie-test.md",
-    "projets/MME/us-545/extraction-jira.md",
-    "projets/MME/us-545/03-cas-test.md",
     "projets/MME/us-545/01-questions-clarifications.md",
     "projets/SPEX/us-3143/02-strategie-test.md",
     "projets/SPEX/us-3143/extraction-jira.md",
-    "projets/SPEX/us-3143/README.md",
-    "projets/SPEX/us-3143/03-cas-test.md",
-    "projets/SPEX/us-3143/01-questions-clarifications.md",
-    "projets/DATA/us-3873",
-    "projets/DATA/us-3872",
-    "projets/DATA"
+    "projets/SPEX/us-3143/README.md"
   ]
 }

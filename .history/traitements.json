@@ -2,97 +2,97 @@
   "ACCOUNT-3182": {
     "ticket_key": "ACCOUNT-3182",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/ACCOUNT/us-3182",
-    "treatment_date": "2025-11-18 09:59:04",
-    "last_update": "2025-11-18 10:00:00"
+    "treatment_date": "2026-01-07 15:28:18",
+    "last_update": "2026-01-07 15:28:18"
   },
   "SPEX-2990": {
     "ticket_key": "SPEX-2990",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/SPEX/us-2990",
-    "treatment_date": "2025-11-18 09:59:05",
-    "last_update": "2025-11-18 10:00:00"
+    "treatment_date": "2026-01-07 15:28:01",
+    "last_update": "2026-01-07 15:28:01"
   },
   "SPEX-3143": {
     "ticket_key": "SPEX-3143",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/SPEX/us-3143",
-    "treatment_date": "2025-11-18 09:59:06",
-    "last_update": "2025-11-18 10:00:00"
+    "treatment_date": "2026-01-07 15:27:49",
+    "last_update": "2026-01-07 15:27:49"
   },
   "ACCOUNT-3239": {
     "ticket_key": "ACCOUNT-3239",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/ACCOUNT/us-3239",
-    "treatment_date": "2025-11-18 10:05:49",
-    "last_update": "2025-11-18 10:05:49"
+    "treatment_date": "2026-01-07 15:28:27",
+    "last_update": "2026-01-07 15:28:27"
   },
   "ACCOUNT-3280": {
     "ticket_key": "ACCOUNT-3280",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/ACCOUNT/us-3280",
-    "treatment_date": "2025-11-18 10:20:09",
-    "last_update": "2025-11-18 10:20:09"
+    "treatment_date": "2026-01-07 15:28:09",
+    "last_update": "2026-01-07 15:28:09"
   },
   "MME-1384": {
     "ticket_key": "MME-1384",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/MME/us-1384",
-    "treatment_date": "2025-11-18 11:22:40",
-    "last_update": "2025-11-18 11:22:40"
+    "treatment_date": "2026-01-07 15:27:17",
+    "last_update": "2026-01-07 15:27:17"
   },
   "MME-1436": {
     "ticket_key": "MME-1436",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/MME/us-1436",
-    "treatment_date": "2025-11-18 11:25:48",
-    "last_update": "2025-11-18 11:25:48"
+    "treatment_date": "2026-01-07 15:27:09",
+    "last_update": "2026-01-07 15:27:09"
   },
   "MME-545": {
     "ticket_key": "MME-545",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/MME/us-545",
-    "treatment_date": "2025-11-18 11:28:39",
-    "last_update": "2025-11-18 11:28:39"
+    "treatment_date": "2026-01-07 15:26:42",
+    "last_update": "2026-01-07 15:26:42"
   },
   "MME-1332": {
     "ticket_key": "MME-1332",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/MME/us-1332",
-    "treatment_date": "2025-11-18 15:10:24",
-    "last_update": "2025-11-18 15:10:24"
+    "treatment_date": "2026-01-07 15:26:50",
+    "last_update": "2026-01-07 15:26:50"
   },
   "MME-1450": {
     "ticket_key": "MME-1450",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/MME/us-1450",
-    "treatment_date": "2025-11-18 15:10:31",
-    "last_update": "2025-11-18 15:10:31"
+    "treatment_date": "2026-01-07 15:27:01",
+    "last_update": "2026-01-07 15:27:01"
   },
   "MME-1385": {
     "ticket_key": "MME-1385",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/MME/us-1385",
-    "treatment_date": "2025-11-18 15:11:35",
-    "last_update": "2025-11-18 15:11:35"
+    "treatment_date": "2026-01-07 15:27:25",
+    "last_update": "2026-01-07 15:27:25"
   },
   "EB-2254": {
     "ticket_key": "EB-2254",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/EB/us-2254",
-    "treatment_date": "2025-11-18 15:11:42",
-    "last_update": "2025-11-18 15:11:42"
+    "treatment_date": "2026-01-07 15:27:31",
+    "last_update": "2026-01-07 15:27:31"
   },
   "EB-2253": {
     "ticket_key": "EB-2253",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/EB/us-2253",
-    "treatment_date": "2025-11-18 15:11:47",
-    "last_update": "2025-11-18 15:11:47"
+    "treatment_date": "2026-01-07 15:27:38",
+    "last_update": "2026-01-07 15:27:38"
   },
   "DATA-3872": {
     "ticket_key": "DATA-3872",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/DATA/us-3872",
-    "treatment_date": "2025-11-18 15:11:53",
-    "last_update": "2025-11-18 15:11:53"
+    "treatment_date": "2026-01-07 15:28:49",
+    "last_update": "2026-01-07 15:28:49"
   },
   "DATA-3873": {
     "ticket_key": "DATA-3873",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/DATA/us-3873",
-    "treatment_date": "2025-11-18 15:12:01",
-    "last_update": "2025-11-18 15:12:01"
+    "treatment_date": "2026-01-07 15:28:58",
+    "last_update": "2026-01-07 15:28:58"
   },
   "ACCOUNT-2608": {
     "ticket_key": "ACCOUNT-2608",
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/ACCOUNT/us-2608",
-    "treatment_date": "2026-01-07 13:13:15",
-    "last_update": "2026-01-07 13:13:15"
+    "treatment_date": "2026-01-07 15:28:40",
+    "last_update": "2026-01-07 15:28:40"
   }
 }

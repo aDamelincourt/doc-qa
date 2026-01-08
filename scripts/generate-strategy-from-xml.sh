@@ -490,4 +490,17 @@ echo "   - Zones à risque pour la non-régression"
 echo "   - Critères de succès et métriques"
 echo ""
 echo "💡 Conseil : Relisez et ajustez la stratégie générée en fonction du contexte spécifique de votre projet."
+echo ""
+
+# Mettre à jour le README après génération
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+UPDATE_README_SCRIPT="$SCRIPT_DIR/update-readme-from-xml.sh"
+if [ -f "$UPDATE_README_SCRIPT" ]; then
+    echo "Mise à jour du README..."
+    "$UPDATE_README_SCRIPT" "$US_DIR" || {
+        echo "⚠️  Erreur lors de la mise à jour du README (non bloquant)"
+    }
+else
+    echo "⚠️  Script de mise à jour du README introuvable : $UPDATE_README_SCRIPT"
+fi
 

@@ -918,3 +918,14 @@ echo "✅ Fichier de cas de test généré : $OUTPUT_FILE"
 SCENARIO_COUNT=$((SCENARIO_NUM - 1))
 echo "   - $SCENARIO_COUNT scénarios générés avec étapes, données de test et résultats attendus"
 echo ""
+
+# Mettre à jour le README après génération
+log_info "Mise à jour du README..."
+UPDATE_README_SCRIPT="$SCRIPT_DIR/update-readme-from-xml.sh"
+if [ -f "$UPDATE_README_SCRIPT" ]; then
+    "$UPDATE_README_SCRIPT" "$US_DIR" || {
+        log_warning "Erreur lors de la mise à jour du README (non bloquant)"
+    }
+else
+    log_warning "Script de mise à jour du README introuvable : $UPDATE_README_SCRIPT"
+fi

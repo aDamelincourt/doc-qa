@@ -226,6 +226,143 @@ validate_xml() {
     return 0
 }
 
+# Générer le fichier extraction-jira.md complet
+# Usage: generate_extraction_jira "/path/to/file.xml" "/path/to/us-dir"
+# Prérequis: parse_xml_file doit avoir été appelé pour définir KEY, TITLE, LINK, PROJECT_NAME, DESCRIPTION_SECTION
+generate_extraction_jira() {
+    local xml_file="$1"
+    local us_dir="$2"
+    
+    if [ -z "$xml_file" ] || [ -z "$us_dir" ]; then
+        log_error "generate_extraction_jira: Arguments manquants"
+        return 1
+    fi
+    
+    if [ ! -f "$xml_file" ]; then
+        log_error "generate_extraction_jira: Fichier XML introuvable : $xml_file"
+        return 1
+    fi
+    
+    if [ ! -d "$us_dir" ]; then
+        log_error "generate_extraction_jira: Dossier US introuvable : $us_dir"
+        return 1
+    fi
+    
+    # Variables doivent être définies par parse_xml_file
+    if [ -z "${KEY:-}" ] || [ -z "${TITLE:-}" ] || [ -z "${LINK:-}" ]; then
+        log_error "generate_extraction_jira: Variables KEY, TITLE, LINK non définies. Appelez parse_xml_file d'abord."
+        return 1
+    fi
+    
+    local extraction_file="$us_dir/extraction-jira.md"
+    local project_dir="${PROJECT_NAME:-$(basename "$(dirname "$xml_file")")}"
+    local ticket_id=$(basename "$xml_file" .xml)
+    
+    # Extraire toutes les informations supplémentaires
+    local status=$(extract_status "$xml_file" 2>/dev/null || echo "")
+    local type=$(extract_type "$xml_file" 2>/dev/null || echo "Story")
+    local priority=$(extract_priority "$xml_file" 2>/dev/null || echo "")
+    
+    # Extraire les critères d'acceptation
+    local acceptance_criteria=$(extract_acceptance_criteria "$xml_file" 2>/dev/null || echo "")
+    
+    # Extraire les liens Figma et Miro
+    local figma_links=$(extract_figma_links "$xml_file" 2>/dev/null || echo "")
+    local miro_links=$(extract_miro_links "$xml_file" 2>/dev/null || echo "")
+    
+    # Extraire les commentaires formatés
+    local comments=$(extract_comments_formatted "$xml_file" 10 2>/dev/null || echo "")
+    
+    # Extraire la description décodée pour la User Story
+    local description_decoded=$(decode_html_cached "${DESCRIPTION_SECTION:-}" 2>/dev/null || echo "${DESCRIPTION_SECTION:-}")
+    local user_story_section=$(echo "$description_decoded" | awk '/USER STORY/i {found=1} found {print} /^<h[12]>/ && found && !/USER STORY/i {exit}' | head -50)
+    
+    cat > "$extraction_file" <<EOF
+# Extraction Jira - $KEY
+
+## 📋 Informations générales
+
+**Clé du ticket** : $KEY
+**Titre/Summary** : $TITLE
+**Type** : ${type:-Story}
+**Statut** : ${status:-[Non disponible]}
+**Priorité** : ${priority:-[Non disponible]}
+**Lien Jira** : $LINK
+
+## 📝 Description / User Story
+
+$(if [ -n "$user_story_section" ]; then
+    echo "$user_story_section" | sed 's/<[^>]*>//g' | sed 's/&[^;]*;//g' | head -30
+else
+    echo "$description_decoded" | sed 's/<[^>]*>//g' | sed 's/&[^;]*;//g' | head -30
+fi)
+
+> **Note** : Description complète disponible dans le fichier XML : \`../Jira/$project_dir/$ticket_id.xml\`
+
+## ✅ Critères d'acceptation
+
+$(if [ -n "$acceptance_criteria" ]; then
+    echo "$acceptance_criteria" | while IFS='|' read -r ac_num title given when then_clause; do
+        if [ -n "$ac_num" ] && [ -n "$title" ]; then
+            echo "### $ac_num - $title"
+            [ -n "$given" ] && echo "**Étant donné que** : $given"
+            [ -n "$when" ] && echo "**Lorsque** : $when"
+            [ -n "$then_clause" ] && echo "**Alors** : $then_clause"
+            echo ""
+        fi
+    done
+else
+    echo "*Aucun critère d'acceptation trouvé dans le XML*"
+fi)
+
+## 💻 Informations techniques
+
+$(if echo "$description_decoded" | grep -qi "SPECS TECHNIQUES\|SPECS\|Technical"; then
+    echo "$description_decoded" | awk '/SPECS TECHNIQUES/i || /SPECS/i || /Technical/i {found=1} found {print} /^<h[12]>/ && found && !/SPECS/i && !/Technical/i && !/Acceptance/i {exit}' | sed 's/<[^>]*>//g' | sed 's/&[^;]*;//g' | grep -v "^$" | head -30
+else
+    echo "*Aucune information technique trouvée dans la description*"
+fi)
+
+## 🎨 Designs
+
+$(if [ -n "$figma_links" ]; then
+    echo "### Liens Figma"
+    echo "$figma_links" | while read -r link; do
+        echo "- $link"
+    done
+    echo ""
+fi)
+
+$(if [ -n "$miro_links" ]; then
+    echo "### Liens Miro (Event Modeling)"
+    echo "$miro_links" | while read -r link; do
+        echo "- $link"
+    done
+    echo ""
+fi)
+
+$(if [ -z "$figma_links" ] && [ -z "$miro_links" ]; then
+    echo "*Aucun lien de design trouvé dans la description*"
+fi)
+
+## 📝 Commentaires de l'équipe
+
+$(if [ -n "$comments" ]; then
+    echo "$comments"
+else
+    echo "*Aucun commentaire trouvé dans le XML*"
+fi)
+
+---
+
+**Date d'extraction** : $(date +"%Y-%m-%d")
+**Fichier source** : Jira/$project_dir/$ticket_id.xml
+EOF
+    
+    log_success "Fichier d'extraction créé/mis à jour : extraction-jira.md"
+    return 0
+}
+
 # Cache pour le parsing XML (optimisation performance)
 # Compatibilité bash 3.x : utiliser des fichiers temporaires au lieu de tableaux associatifs
 XML_CACHE_TTL=300  # 5 minutes

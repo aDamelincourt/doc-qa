@@ -135,49 +135,13 @@ for xml_file in "${xml_files[@]}"; do
         # Régénérer tous les documents
         log_info "  Régénération des documents..."
         
-        # 1. Extraction Jira
-        EXTRACTION_FILE="$us_dir/extraction-jira.md"
-        DESCRIPTION=$(extract_description "$xml_file" 20)
-        cat > "$EXTRACTION_FILE" <<EOF
-# Extraction Jira - $KEY
-
-## 📋 Informations générales
-
-**Clé du ticket** : $KEY
-**Titre/Summary** : $TITLE
-**Type** : Story
-**Statut** : [À extraire manuellement]
-**Lien Jira** : $LINK
-
-## 📝 Description / User Story
-
-\`\`\`
-$(echo "$DESCRIPTION" | head -100)
-\`\`\`
-
-> **Note** : Description complète disponible dans le fichier XML : \`../Jira/$project/$(basename "$xml_file")\`
-
-## ✅ Critères d'acceptation
-
-[À extraire manuellement depuis le XML - section Acceptance Criteria]
-
-## 💻 Informations techniques
-
-[À extraire manuellement depuis les commentaires du XML]
-
-## 🎨 Designs
-
-[À extraire manuellement depuis le XML - liens Figma]
-
-## 📝 Commentaires de l'équipe
-
-[À extraire manuellement depuis le XML - balise <comment>]
-
----
-
-**Date d'extraction** : $(date +"%Y-%m-%d")
-**Fichier source** : Jira/$project/$(basename "$xml_file")
-EOF
+        # 1. Extraction Jira (utiliser la fonction commune pour génération complète)
+        log_info "    - Régénération de extraction-jira.md..."
+        if ! generate_extraction_jira "$xml_file" "$us_dir"; then
+            log_error "    Erreur lors de la régénération de extraction-jira.md"
+            error_count=$((error_count + 1))
+            continue
+        fi
         
         # 2-4. Génération des documents
         if [ "$USE_CURSOR" = true ]; then

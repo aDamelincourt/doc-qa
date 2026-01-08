@@ -375,4 +375,16 @@ echo "   - Questions Dev : $DEV_COUNT"
 echo "   - Questions Designer : $DESIGNER_COUNT"
 echo ""
 echo "💡 Conseil : Relisez et ajustez les questions générées en fonction du contexte spécifique de votre projet."
+echo ""
+
+# Mettre à jour le README après génération
+log_info "Mise à jour du README..."
+UPDATE_README_SCRIPT="$SCRIPT_DIR/update-readme-from-xml.sh"
+if [ -f "$UPDATE_README_SCRIPT" ]; then
+    "$UPDATE_README_SCRIPT" "$US_DIR" || {
+        log_warning "Erreur lors de la mise à jour du README (non bloquant)"
+    }
+else
+    log_warning "Script de mise à jour du README introuvable : $UPDATE_README_SCRIPT"
+fi
 

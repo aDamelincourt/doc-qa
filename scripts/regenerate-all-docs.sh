@@ -1,7 +1,11 @@
 #!/bin/bash
 
 # Script pour régénérer tous les documents QA à partir des exports XML existants
-# Usage: ./scripts/regenerate-all-docs.sh [--force]
+# Usage: ./scripts/regenerate-all-docs.sh [--force] [--cursor]
+#
+# Options:
+#   --force    Forcer la régénération même si les documents existent
+#   --cursor   Utiliser Cursor IA pour la génération (équivalent à retreat-all-xml.sh)
 
 set -euo pipefail
 
@@ -16,11 +20,25 @@ source "$LIB_DIR/ticket-utils.sh"
 
 # Gestion des arguments
 FORCE=false
-if [ "${1:-}" == "--force" ]; then
-    FORCE=true
-fi
+USE_CURSOR=false
+for arg in "$@"; do
+    case "$arg" in
+        --force)
+            FORCE=true
+            ;;
+        --cursor)
+            USE_CURSOR=true
+            ;;
+    esac
+done
 
-log_info "Régénération de tous les documents QA à partir des exports XML..."
+if [ "$USE_CURSOR" = true ]; then
+    log_info "🔄 Retraitement de TOUS les fichiers XML avec Cursor IA..."
+    log_info "   Les prompts seront affichés pour chaque fichier"
+    log_info "   Vous pourrez les donner à l'agent Cursor pour génération"
+else
+    log_info "Régénération de tous les documents QA à partir des exports XML..."
+fi
 echo ""
 
 # Valider le répertoire Jira
@@ -161,29 +179,41 @@ $(echo "$DESCRIPTION" | head -100)
 **Fichier source** : Jira/$project/$(basename "$xml_file")
 EOF
         
-        # 2. Questions et Clarifications
-        log_info "    - Génération des questions de clarifications..."
-        "$GENERATE_QUESTIONS_SCRIPT" "$us_dir" || {
-            log_error "    Erreur lors de la génération des questions"
-            error_count=$((error_count + 1))
-            continue
-        }
-        
-        # 3. Stratégie de Test
-        log_info "    - Génération de la stratégie de test..."
-        "$GENERATE_STRATEGY_SCRIPT" "$us_dir" || {
-            log_error "    Erreur lors de la génération de la stratégie"
-            error_count=$((error_count + 1))
-            continue
-        }
-        
-        # 4. Cas de Test
-        log_info "    - Génération des cas de test..."
-        "$GENERATE_TEST_CASES_SCRIPT" "$us_dir" || {
-            log_error "    Erreur lors de la génération des cas de test"
-            error_count=$((error_count + 1))
-            continue
-        }
+        # 2-4. Génération des documents
+        if [ "$USE_CURSOR" = true ]; then
+            # Utiliser Cursor IA pour générer les documents
+            log_info "    - Génération avec Cursor IA..."
+            "$SCRIPT_DIR/generate-with-cursor.sh" "all" "$us_dir" "--auto" || {
+                log_error "    Erreur lors de la génération avec Cursor IA"
+                error_count=$((error_count + 1))
+                continue
+            }
+        else
+            # Utiliser les scripts de génération classiques
+            # 2. Questions et Clarifications
+            log_info "    - Génération des questions de clarifications..."
+            "$GENERATE_QUESTIONS_SCRIPT" "$us_dir" || {
+                log_error "    Erreur lors de la génération des questions"
+                error_count=$((error_count + 1))
+                continue
+            }
+            
+            # 3. Stratégie de Test
+            log_info "    - Génération de la stratégie de test..."
+            "$GENERATE_STRATEGY_SCRIPT" "$us_dir" || {
+                log_error "    Erreur lors de la génération de la stratégie"
+                error_count=$((error_count + 1))
+                continue
+            }
+            
+            # 4. Cas de Test
+            log_info "    - Génération des cas de test..."
+            "$GENERATE_TEST_CASES_SCRIPT" "$us_dir" || {
+                log_error "    Erreur lors de la génération des cas de test"
+                error_count=$((error_count + 1))
+                continue
+            }
+        fi
         
         # 5. README
         log_info "    - Mise à jour du README..."

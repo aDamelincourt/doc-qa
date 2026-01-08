@@ -247,6 +247,12 @@ Nommage: readme_fr.pdf (conforme)
 
 # Forcer la régénération même si les fichiers existent
 ./scripts/regenerate-all-docs.sh --force
+
+# Utiliser Cursor IA pour la génération
+./scripts/regenerate-all-docs.sh --cursor
+
+# Combiner les options
+./scripts/regenerate-all-docs.sh --force --cursor
 ```
 
 **Fonctionnalités** :
@@ -256,7 +262,12 @@ Nommage: readme_fr.pdf (conforme)
   - `01-questions-clarifications.md`
   - `02-strategie-test.md`
   - `03-cas-test.md`
+- Option `--cursor` : Utilise Cursor IA pour générer les documents (affiche les prompts)
 - Utile après une mise à jour des templates ou des scripts
+
+**Options** :
+- `--force` : Forcer la régénération même si les documents existent
+- `--cursor` : Utiliser Cursor IA pour la génération (équivalent à l'ancien `retreat-all-xml.sh`)
 
 **Note** : Utile pour mettre à jour tous les documents après une modification des templates ou des scripts de génération.
 
@@ -295,42 +306,46 @@ Nommage: readme_fr.pdf (conforme)
 
 ### 9. `generate-with-cursor.sh`
 
-**Usage** : Préparer le prompt pour générer un document avec l'agent Cursor
+**Usage** : Script unifié pour générer des documents avec l'agent Cursor IA
 
 ```bash
-# Générer les questions de clarifications
+# Mode interactif (défaut) - Générer un document
 ./scripts/generate-with-cursor.sh questions projets/SPEX/us-2990
-
-# Générer la stratégie de test
 ./scripts/generate-with-cursor.sh strategy projets/SPEX/us-2990
-
-# Générer les cas de test
 ./scripts/generate-with-cursor.sh test-cases projets/SPEX/us-2990
+
+# Générer tous les documents en une fois
+./scripts/generate-with-cursor.sh all projets/SPEX/us-2990
+
+# Mode direct (affiche le prompt clairement)
+./scripts/generate-with-cursor.sh questions projets/SPEX/us-2990 --direct
+
+# Mode automatique (génère directement)
+./scripts/generate-with-cursor.sh all projets/SPEX/us-2990 --auto
+
+# Mode interactif explicite
+./scripts/generate-with-cursor.sh questions projets/SPEX/us-2990 --interactive
 ```
 
 **Fonctionnalités** :
 - Prépare un prompt détaillé pour l'agent Cursor
 - Extrait le contexte complet depuis le XML
 - Génère un fichier temporaire avec le prompt prêt à utiliser
+- Supporte plusieurs modes d'affichage
 
-**Note** : Voir `README-CURSOR-IA.md` pour plus de détails sur l'intégration avec Cursor.
+**Types de documents** :
+- `questions` : Questions de clarifications
+- `strategy` : Stratégie de test
+- `test-cases` : Cas de test
+- `all` : Tous les documents (équivalent à l'ancien `generate-all-with-cursor.sh`)
 
----
+**Options** :
+- `--all` : Générer tous les documents (déjà inclus avec `all` comme type)
+- `--direct` : Mode direct (affiche le prompt clairement, équivalent à l'ancien `generate-with-cursor-direct.sh`)
+- `--auto` : Mode automatique (génère directement, équivalent à l'ancien `generate-docs-directly.sh`)
+- `--interactive` : Mode interactif (défaut, affiche le prompt pour copier-coller)
 
-### 10. `generate-all-with-cursor.sh`
-
-**Usage** : Générer tous les documents pour une US avec l'agent Cursor
-
-```bash
-./scripts/generate-all-with-cursor.sh projets/SPEX/us-2990
-```
-
-**Fonctionnalités** :
-- Génère les 3 documents (questions, stratégie, cas de test) pour une US
-- Prépare les prompts pour l'agent Cursor
-- Utile pour générer tous les documents en une seule commande
-
-**Note** : Voir `README-CURSOR-IA.md` pour plus de détails.
+**Note** : Voir `GUIDE-CURSOR-IA.md` à la racine du projet pour plus de détails sur l'intégration avec Cursor.
 
 ---
 

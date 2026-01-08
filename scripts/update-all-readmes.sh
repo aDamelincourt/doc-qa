@@ -30,7 +30,7 @@ for US_DIR in "${US_DIRS[@]}"; do
     
         log_info "Mise à jour de $PROJECT_NAME/$US_NAME..."
         
-        if "$SCRIPT_DIR/update-readme-from-xml.sh" "$US_DIR" > /dev/null 2>&1; then
+        if "$SCRIPT_DIR/update-readme-from-xml.sh" "$US_DIR" 2>&1; then
             UPDATED_COUNT=$((UPDATED_COUNT + 1))
             log_success "$US_NAME mis à jour"
         else

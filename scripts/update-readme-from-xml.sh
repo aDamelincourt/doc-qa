@@ -16,6 +16,8 @@ source "$LIB_DIR/ticket-utils.sh"
 # Gestion des erreurs avec trap
 cleanup_on_error() {
     log_error "Erreur lors de la mise à jour du README. Nettoyage..."
+    log_error "Dernière commande: $BASH_COMMAND"
+    log_error "Ligne: $LINENO"
     exit 1
 }
 trap cleanup_on_error ERR
@@ -67,8 +69,31 @@ DESCRIPTION_DECODED=$(decode_html "$DESCRIPTION_SECTION")
 # EXTRACTION DES INFORMATIONS
 # ============================================================================
 
-# Extraire la User Story (As a... I want... So that...)
-USER_STORY_FULL=$(echo "$DESCRIPTION_SECTION" | grep -i "as a" | head -1 | sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g; s/&quot;/"/g; s/&apos;/'"'"'/g' | sed 's/<[^>]*>//g' | sed 's/&#160;/ /g' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | sed 's/[[:space:]]\{2,\}/ /g')
+# Extraire la User Story (As a... I want... So that... ou En tant que... Je veux...)
+# Utiliser DESCRIPTION_DECODED qui est déjà décodé
+# Extraire la section USER STORY complète entre "USER STORY" et la prochaine section
+USER_STORY_SECTION=$(echo "$DESCRIPTION_DECODED" | sed -n '/USER STORY/I,/SPECS TECHNIQUES\|ACCEPTANCE CRITERIA/Ip' | head -20)
+if [ -z "$USER_STORY_SECTION" ]; then
+    # Si pas trouvé, essayer avec DESCRIPTION_SECTION (encodé) puis décoder
+    USER_STORY_SECTION=$(echo "$DESCRIPTION_SECTION" | sed -n '/USER STORY/I,/SPECS TECHNIQUES\|ACCEPTANCE CRITERIA/Ip' | head -20)
+    if [ -n "$USER_STORY_SECTION" ]; then
+        USER_STORY_SECTION=$(decode_html "$USER_STORY_SECTION")
+    fi
+fi
+
+# Extraire la phrase complète de la User Story en concaténant les lignes pertinentes
+if echo "$USER_STORY_SECTION" | grep -qi "en tant que"; then
+    # Format français : concaténer les lignes contenant "Afin de", "En tant que", "Je veux"
+    USER_STORY_FULL=$(echo "$USER_STORY_SECTION" | grep -iE "afin de|en tant que|je veux" | tr '\n' ' ' | sed 's/<[^>]*>//g' | sed 's/&#160;/ /g' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | sed 's/[[:space:]]\{2,\}/ /g' | head -c 500 || true)
+else
+    # Format anglais : concaténer les lignes contenant "As a", "I want", "So that"
+    USER_STORY_FULL=$(echo "$USER_STORY_SECTION" | grep -iE "as a|i want|so that" | tr '\n' ' ' | sed 's/<[^>]*>//g' | sed 's/&#160;/ /g' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | sed 's/[[:space:]]\{2,\}/ /g' | head -c 500 || true)
+fi
+
+# Si toujours vide, utiliser une valeur par défaut pour éviter les erreurs
+if [ -z "$USER_STORY_FULL" ]; then
+    USER_STORY_FULL="User Story non trouvée dans la description"
+fi
 # Nettoyer les doublons potentiels (prendre seulement la première occurrence si doublon)
 USER_STORY_FULL=$(echo "$USER_STORY_FULL" | awk '{
     line = $0
@@ -84,24 +109,39 @@ USER_STORY_FULL=$(echo "$USER_STORY_FULL" | awk '{
 }' | head -c 500)
 
 # Extraire les parties de la User Story avec une méthode plus robuste
-AS_A=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Aa]s a ([^,]*),.*/\1/' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-if [ -z "$AS_A" ] || [ "$AS_A" = "$USER_STORY_FULL" ]; then
-    AS_A=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Aa]s a ([^,]*),.*/\1/' | head -1 | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-fi
-
-I_WANT=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Ii] want ([^,]*),.*/\1/' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-if [ -z "$I_WANT" ] || [ "$I_WANT" = "$USER_STORY_FULL" ]; then
-    # Essayer d'extraire entre "I want" et "so that"
-    I_WANT=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Ii] want ([^.]*) so that.*/\1/' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-fi
-
-SO_THAT=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Ss]o that ([^.]*).*/\1/' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-if [ -z "$SO_THAT" ] || [ "$SO_THAT" = "$USER_STORY_FULL" ]; then
-    SO_THAT=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Ss]o that ([^.]*).*/\1/' | head -1 | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+# Gérer les formats français et anglais
+if echo "$USER_STORY_FULL" | grep -qi "en tant que"; then
+    # Format français : "Afin de Z, En tant que X, Je veux Y"
+    # Extraire "En tant que X"
+    AS_A=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Ee]n tant que ([^,]*),.*/\1/' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    # Extraire "Je veux Y" (peut être sur plusieurs lignes)
+    I_WANT=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Jj]e veux ([^.]*).*/\1/' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    # Extraire "Afin de Z" (peut être au début)
+    SO_THAT=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Aa]fin de ([^,]*),.*/\1/' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    if [ -z "$SO_THAT" ]; then
+        SO_THAT=$(echo "$USER_STORY_FULL" | sed -E 's/^([^,]*),.*[Ee]n tant que.*/\1/' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    fi
+else
+    # Format anglais : "As a X, I want Y, So that Z"
+    AS_A=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Aa]s a ([^,]*),.*/\1/' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    if [ -z "$AS_A" ] || [ "$AS_A" = "$USER_STORY_FULL" ]; then
+        AS_A=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Aa]s a ([^,]*),.*/\1/' | head -1 | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    fi
+    
+    I_WANT=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Ii] want ([^,]*),.*/\1/' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    if [ -z "$I_WANT" ] || [ "$I_WANT" = "$USER_STORY_FULL" ]; then
+        # Essayer d'extraire entre "I want" et "so that"
+        I_WANT=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Ii] want ([^.]*) so that.*/\1/' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    fi
+    
+    SO_THAT=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Ss]o that ([^.]*).*/\1/' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    if [ -z "$SO_THAT" ] || [ "$SO_THAT" = "$USER_STORY_FULL" ]; then
+        SO_THAT=$(echo "$USER_STORY_FULL" | sed -E 's/.*[Ss]o that ([^.]*).*/\1/' | head -1 | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    fi
 fi
 
 # Extraire les critères d'acceptation (scénarios)
-ACCEPTANCE_CRITERIA=$(echo "$DESCRIPTION_SECTION" | grep -A 50 -i "acceptance criteria\|scenario" | head -100 | sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g; s/&quot;/"/g; s/&apos;/'"'"'/g' | sed 's/<[^>]*>//g' | grep -i "scenario\|given\|when\|then" | head -10)
+ACCEPTANCE_CRITERIA=$(echo "$DESCRIPTION_SECTION" | grep -A 50 -i "acceptance criteria\|scenario" | head -100 | sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g; s/&quot;/"/g; s/&apos;/'"'"'/g' | sed 's/<[^>]*>//g' | grep -i "scenario\|given\|when\|then" | head -10 || true)
 
 # Compter les scénarios dans les fichiers de test
 TEST_CASES_FILE="$US_DIR/03-cas-test.md"
@@ -206,26 +246,9 @@ if [ -n "$SO_THAT" ]; then
 fi
 
 # Mettre à jour la description complète
-if [ -n "$USER_STORY_FULL" ]; then
-    # Remplacer la ligne de description (éviter les doublons)
-    # Utiliser awk pour éviter les problèmes avec sed et les caractères spéciaux
-    TEMP_README=$(mktemp)
-    awk -v new_desc="$USER_STORY_FULL" '
-        /\[Description de la User Story et du besoin utilisateur\]/ {
-            print new_desc
-            next
-        }
-        {
-            # Nettoyer les doublons si présents dans la ligne actuelle
-            line = $0
-            len = length(new_desc)
-            if (index(line, new_desc new_desc) > 0) {
-                gsub(new_desc new_desc, new_desc, line)
-            }
-            print line
-        }
-    ' "$README_FILE" > "$TEMP_README"
-    mv "$TEMP_README" "$README_FILE"
+if [ -n "$USER_STORY_FULL" ] && [ "$USER_STORY_FULL" != "User Story non trouvée dans la description" ]; then
+    # Remplacer la ligne de description avec sed (plus simple et robuste)
+    sed -i '' "s|\[Description de la User Story et du besoin utilisateur\]|$USER_STORY_FULL|g" "$README_FILE" || true
 fi
 
 # Extraire et formater les critères d'acceptation (scénarios)
@@ -246,7 +269,7 @@ if [ -n "$XML_FILE" ] && [ -f "$XML_FILE" ]; then
         DECODED_SECTION=$(echo "$ACCEPTANCE_SECTION" | sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g; s/&quot;/"/g; s/&apos;/'"'"'/g; s/&#160;/ /g; s/&#8232;//g; s/&#8220;/"/g; s/&#8221;/"/g')
         
         # Extraire les titres des scénarios (format: <b>Scenario: ...</b> ou <b>Scenario - ...</b>)
-        SCENARIO_LINES=$(echo "$DECODED_SECTION" | grep -i "<b>Scenario")
+        SCENARIO_LINES=$(echo "$DECODED_SECTION" | grep -i "<b>Scenario" || true)
         
         # Créer un fichier temporaire pour stocker les critères directement
         TEMP_CRITERIA_FILE=$(mktemp)

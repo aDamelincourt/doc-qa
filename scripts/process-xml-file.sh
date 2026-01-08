@@ -1,9 +1,23 @@
 #!/bin/bash
 
 # Script pour traiter un fichier XML Jira et préparer la génération de documentation QA
-# Usage: ./scripts/process-xml-file.sh [FICHIER_XML]
+# Usage: ./scripts/process-xml-file.sh [FICHIER_XML] [--force]
 
 set -euo pipefail
+
+# Gestion des arguments
+FORCE_REGENERATE=false
+if [ "${2:-}" == "--force" ] || [ "${1:-}" == "--force" ]; then
+    FORCE_REGENERATE=true
+    # Si le premier argument est --force, le second est le fichier XML
+    if [ "${1:-}" == "--force" ]; then
+        XML_FILE="${2:-}"
+    else
+        XML_FILE="${1:-}"
+    fi
+else
+    XML_FILE="${1:-}"
+fi
 
 # Charger les bibliothèques communes
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,13 +37,11 @@ cleanup_on_error() {
 }
 trap cleanup_on_error ERR
 
-if [ -z "${1:-}" ]; then
+if [ -z "$XML_FILE" ]; then
     log_error "Fichier XML requis"
-    echo "Usage: ./scripts/process-xml-file.sh [FICHIER_XML]"
+    echo "Usage: ./scripts/process-xml-file.sh [FICHIER_XML] [--force]"
     exit 1
 fi
-
-XML_FILE="$1"
 
 # Valider le fichier XML
 if ! validate_xml "$XML_FILE"; then
@@ -66,7 +78,10 @@ if is_ticket_processed "$KEY"; then
     if [ -d "$existing_dir" ] && [ -f "$existing_dir/README.md" ]; then
         log_info "   Le dossier existe toujours et contient de la documentation"
         
-        if [ "$DRY_RUN" != "true" ]; then
+        if [ "$FORCE_REGENERATE" = true ]; then
+            log_warning "   Mode --force activé : régénération forcée"
+            US_DIR="$existing_dir"
+        elif [ "$DRY_RUN" != "true" ]; then
             read -p "Voulez-vous régénérer la documentation ? (o/N) " -n 1 -r
             echo
             if [[ ! $REPLY =~ ^[Oo]$ ]]; then
@@ -278,40 +293,52 @@ echo ""
 log_info "Création des fichiers de documentation..."
 echo ""
 
-# 1. Questions et Clarifications - Générer avec Cursor ou méthode classique
-log_info "Génération des questions de clarifications..."
-log_info "   Préparation du prompt pour l'agent Cursor..."
-"$GENERATE_WITH_CURSOR_SCRIPT" "questions" "$US_DIR" || {
-    log_warning "Erreur avec la préparation du prompt, basculement vers méthode classique..."
+# 1. Questions et Clarifications - Générer avec Cursor IA (priorité)
+log_info "Génération des questions de clarifications avec Cursor IA..."
+log_info "   Préparation du prompt détaillé pour l'agent Cursor..."
+if "$GENERATE_WITH_CURSOR_SCRIPT" "questions" "$US_DIR" 2>/dev/null; then
+    log_success "✅ Prompt préparé pour génération avec Cursor IA"
+    log_info "   👉 Copiez le prompt affiché ci-dessus et donnez-le à l'agent Cursor pour génération"
+    log_info "   💾 Le document sera sauvegardé dans : $US_DIR/01-questions-clarifications.md"
+else
+    log_warning "⚠️  Erreur avec la préparation du prompt Cursor, basculement vers méthode classique..."
     "$GENERATE_QUESTIONS_SCRIPT" "$US_DIR" || {
         log_error "Erreur lors de la génération des questions"
         exit 1
     }
-}
+fi
 echo ""
 
-# 2. Stratégie de Test - Générer avec Cursor ou méthode classique
-log_info "Génération de la stratégie de test..."
-log_info "   Préparation du prompt pour l'agent Cursor..."
-"$GENERATE_WITH_CURSOR_SCRIPT" "strategy" "$US_DIR" || {
-    log_warning "Erreur avec la préparation du prompt, basculement vers méthode classique..."
+# 2. Stratégie de Test - Générer avec Cursor IA (priorité)
+log_info "Génération de la stratégie de test avec Cursor IA..."
+log_info "   Préparation du prompt détaillé pour l'agent Cursor..."
+if "$GENERATE_WITH_CURSOR_SCRIPT" "strategy" "$US_DIR" 2>/dev/null; then
+    log_success "✅ Prompt préparé pour génération avec Cursor IA"
+    log_info "   👉 Copiez le prompt affiché ci-dessus et donnez-le à l'agent Cursor pour génération"
+    log_info "   💾 Le document sera sauvegardé dans : $US_DIR/02-strategie-test.md"
+else
+    log_warning "⚠️  Erreur avec la préparation du prompt Cursor, basculement vers méthode classique..."
     "$GENERATE_STRATEGY_SCRIPT" "$US_DIR" || {
         log_error "Erreur lors de la génération de la stratégie"
         exit 1
     }
-}
+fi
 echo ""
 
-# 3. Cas de Test - Générer avec Cursor ou méthode classique
-log_info "Génération des cas de test..."
-log_info "   Préparation du prompt pour l'agent Cursor..."
-"$GENERATE_WITH_CURSOR_SCRIPT" "test-cases" "$US_DIR" || {
-    log_warning "Erreur avec la préparation du prompt, basculement vers méthode classique..."
+# 3. Cas de Test - Générer avec Cursor IA (priorité)
+log_info "Génération des cas de test avec Cursor IA..."
+log_info "   Préparation du prompt détaillé pour l'agent Cursor..."
+if "$GENERATE_WITH_CURSOR_SCRIPT" "test-cases" "$US_DIR" 2>/dev/null; then
+    log_success "✅ Prompt préparé pour génération avec Cursor IA"
+    log_info "   👉 Copiez le prompt affiché ci-dessus et donnez-le à l'agent Cursor pour génération"
+    log_info "   💾 Le document sera sauvegardé dans : $US_DIR/03-cas-test.md"
+else
+    log_warning "⚠️  Erreur avec la préparation du prompt Cursor, basculement vers méthode classique..."
     "$GENERATE_TEST_CASES_SCRIPT" "$US_DIR" || {
         log_error "Erreur lors de la génération des cas de test"
         exit 1
     }
-}
+fi
 echo ""
 
 # Mettre à jour le README avec les informations extraites
@@ -333,15 +360,18 @@ log_success "Traitement terminé pour $KEY"
 echo ""
 echo "📁 Fichiers créés dans : $US_DIR"
 echo "   - README.md (vue d'ensemble)"
-echo "   - extraction-jira.md (informations extraites du XML - À COMPLÉTER)"
-echo "   - 01-questions-clarifications.md (⭐ généré automatiquement avec ~30-40 questions pertinentes)"
-echo "   - 02-strategie-test.md (⭐ généré automatiquement avec 8 axes de test détaillés)"
-echo "   - 03-cas-test.md (template pré-rempli)"
+echo "   - extraction-jira.md (✅ généré automatiquement avec toutes les données extraites)"
+echo "   - 01-questions-clarifications.md (🤖 prompts Cursor IA préparés - à générer)"
+echo "   - 02-strategie-test.md (🤖 prompts Cursor IA préparés - à générer)"
+echo "   - 03-cas-test.md (🤖 prompts Cursor IA préparés - à générer)"
 echo ""
 echo "🔗 Prochaines étapes :"
-echo "   1. Relire et ajuster les questions de clarifications générées (si nécessaire)"
-echo "   2. Relire et ajuster la stratégie de test générée (si nécessaire)"
-echo "   3. Compléter extraction-jira.md avec toutes les informations du XML"
-echo "   4. Relire et compléter les cas de test générés"
+echo "   1. 📋 Les prompts Cursor IA sont affichés ci-dessus"
+echo "   2. 🤖 Copiez chaque prompt et donnez-le à l'agent Cursor (moi) pour génération"
+echo "   3. 💾 Sauvegardez les documents générés dans les fichiers correspondants"
+echo "   4. ✅ Vérifiez et validez les documents générés"
+echo ""
+echo "💡 ASTUCE : Utilisez './scripts/generate-with-cursor-direct.sh all $US_DIR'"
+echo "   pour afficher tous les prompts de manière encore plus claire"
 echo ""
 

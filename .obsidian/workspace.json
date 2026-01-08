@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "projets/ACCOUNT/us-3280/extraction-jira.md",
+                "file": "projets/ACCOUNT/us-2608/01-questions-clarifications.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "extraction-jira"
+              "title": "01-questions-clarifications"
             }
           }
         ]
@@ -184,13 +184,17 @@
       "markdown-importer:Ouvrir l'importateur Markdown": false
     }
   },
-  "active": "b79074474d91deaa",
+  "active": "1a09a2d00b55cda3",
   "lastOpenFiles": [
-    "projets/ACCOUNT/us-2608/03-cas-test.md",
-    "projets/ACCOUNT/us-2608/02-strategie-test.md",
-    "projets/ACCOUNT/us-2608/01-questions-clarifications.md",
-    "projets/ACCOUNT/us-2608/README.md",
+    "GUIDE-CURSOR-IA.md",
+    "scripts/generate-with-cursor-direct.sh",
+    "FONCTIONNEMENT-PROJET.md",
     "projets/ACCOUNT/us-2608/extraction-jira.md",
+    "projets/ACCOUNT/us-2608/01-questions-clarifications.md",
+    "projets/ACCOUNT/us-2608/02-strategie-test.md",
+    "projets/ACCOUNT/us-3280/extraction-jira.md",
+    "projets/ACCOUNT/us-2608/03-cas-test.md",
+    "projets/ACCOUNT/us-2608/README.md",
     "projets/ACCOUNT/us-2608",
     "projets/ACCOUNT/us-3239/03-cas-test.md",
     "projets/ACCOUNT/us-3239/02-strategie-test.md",
@@ -215,11 +219,8 @@
     "projets/SPEX/us-3143/README.md",
     "projets/SPEX/us-3143/03-cas-test.md",
     "projets/SPEX/us-3143/01-questions-clarifications.md",
-    "projets/SPEX/us-2990/extraction-jira.md",
-    "projets/SPEX/us-2990/README.md",
     "projets/DATA/us-3873",
     "projets/DATA/us-3872",
-    "projets/DATA",
-    "projets/EB/us-2253"
+    "projets/DATA"
   ]
 }

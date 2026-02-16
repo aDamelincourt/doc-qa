@@ -29,6 +29,7 @@ source "$LIB_DIR/processing-utils.sh"
 source "$LIB_DIR/ticket-utils.sh"
 source "$LIB_DIR/history-utils.sh"
 source "$LIB_DIR/acceptance-criteria-utils.sh"
+source "$LIB_DIR/cursor-ai-utils.sh"
 
 # Gestion des erreurs avec trap
 cleanup_on_error() {
@@ -194,15 +195,17 @@ echo ""
 log_info "Création des fichiers de documentation..."
 echo ""
 
-# 1. Questions et Clarifications - Générer avec Cursor IA (priorité)
-log_info "Génération des questions de clarifications avec Cursor IA..."
-log_info "   Préparation du prompt détaillé pour l'agent Cursor..."
-if "$GENERATE_WITH_CURSOR_SCRIPT" "questions" "$US_DIR" 2>/dev/null; then
-    log_success "✅ Prompt préparé pour génération avec Cursor IA"
-    log_info "   👉 Copiez le prompt affiché ci-dessus et donnez-le à l'agent Cursor pour génération"
-    log_info "   💾 Le document sera sauvegardé dans : $US_DIR/01-questions-clarifications.md"
+# 1. Questions et Clarifications - Générer avec Cursor IA (voie prépondérante)
+log_info "Génération des questions de clarifications avec Cursor IA (voie prépondérante)..."
+if generate_document_directly "questions" "$US_DIR" 2>/dev/null; then
+    if [ -f "$US_DIR/01-questions-clarifications.md" ] && [ -s "$US_DIR/01-questions-clarifications.md" ]; then
+        log_success "✅ Document généré directement avec Cursor IA : $US_DIR/01-questions-clarifications.md"
+    else
+        log_info "📋 Prompt préparé pour génération avec Cursor IA"
+        log_info "   👉 Copiez le prompt affiché ci-dessus et donnez-le à l'agent Cursor pour génération"
+    fi
 else
-    log_warning "⚠️  Erreur avec la préparation du prompt Cursor, basculement vers méthode classique..."
+    log_warning "⚠️  Erreur avec Cursor IA, basculement vers méthode classique..."
     "$GENERATE_QUESTIONS_SCRIPT" "$US_DIR" || {
         log_error "Erreur lors de la génération des questions"
         exit 1
@@ -210,15 +213,17 @@ else
 fi
 echo ""
 
-# 2. Stratégie de Test - Générer avec Cursor IA (priorité)
-log_info "Génération de la stratégie de test avec Cursor IA..."
-log_info "   Préparation du prompt détaillé pour l'agent Cursor..."
-if "$GENERATE_WITH_CURSOR_SCRIPT" "strategy" "$US_DIR" 2>/dev/null; then
-    log_success "✅ Prompt préparé pour génération avec Cursor IA"
-    log_info "   👉 Copiez le prompt affiché ci-dessus et donnez-le à l'agent Cursor pour génération"
-    log_info "   💾 Le document sera sauvegardé dans : $US_DIR/02-strategie-test.md"
+# 2. Stratégie de Test - Générer avec Cursor IA (voie prépondérante)
+log_info "Génération de la stratégie de test avec Cursor IA (voie prépondérante)..."
+if generate_document_directly "strategy" "$US_DIR" 2>/dev/null; then
+    if [ -f "$US_DIR/02-strategie-test.md" ] && [ -s "$US_DIR/02-strategie-test.md" ]; then
+        log_success "✅ Document généré directement avec Cursor IA : $US_DIR/02-strategie-test.md"
+    else
+        log_info "📋 Prompt préparé pour génération avec Cursor IA"
+        log_info "   👉 Copiez le prompt affiché ci-dessus et donnez-le à l'agent Cursor pour génération"
+    fi
 else
-    log_warning "⚠️  Erreur avec la préparation du prompt Cursor, basculement vers méthode classique..."
+    log_warning "⚠️  Erreur avec Cursor IA, basculement vers méthode classique..."
     "$GENERATE_STRATEGY_SCRIPT" "$US_DIR" || {
         log_error "Erreur lors de la génération de la stratégie"
         exit 1
@@ -226,15 +231,17 @@ else
 fi
 echo ""
 
-# 3. Cas de Test - Générer avec Cursor IA (priorité)
-log_info "Génération des cas de test avec Cursor IA..."
-log_info "   Préparation du prompt détaillé pour l'agent Cursor..."
-if "$GENERATE_WITH_CURSOR_SCRIPT" "test-cases" "$US_DIR" 2>/dev/null; then
-    log_success "✅ Prompt préparé pour génération avec Cursor IA"
-    log_info "   👉 Copiez le prompt affiché ci-dessus et donnez-le à l'agent Cursor pour génération"
-    log_info "   💾 Le document sera sauvegardé dans : $US_DIR/03-cas-test.md"
+# 3. Cas de Test - Générer avec Cursor IA (voie prépondérante)
+log_info "Génération des cas de test avec Cursor IA (voie prépondérante)..."
+if generate_document_directly "test-cases" "$US_DIR" 2>/dev/null; then
+    if [ -f "$US_DIR/03-cas-test.md" ] && [ -s "$US_DIR/03-cas-test.md" ]; then
+        log_success "✅ Document généré directement avec Cursor IA : $US_DIR/03-cas-test.md"
+    else
+        log_info "📋 Prompt préparé pour génération avec Cursor IA"
+        log_info "   👉 Copiez le prompt affiché ci-dessus et donnez-le à l'agent Cursor pour génération"
+    fi
 else
-    log_warning "⚠️  Erreur avec la préparation du prompt Cursor, basculement vers méthode classique..."
+    log_warning "⚠️  Erreur avec Cursor IA, basculement vers méthode classique..."
     "$GENERATE_TEST_CASES_SCRIPT" "$US_DIR" || {
         log_error "Erreur lors de la génération des cas de test"
         exit 1

@@ -20,54 +20,86 @@ if [ -f "$SCRIPT_DIR/acceptance-criteria-utils.sh" ]; then
     source "$SCRIPT_DIR/acceptance-criteria-utils.sh"
 fi
 
-# Préparer un contexte riche pour l'IA à partir du XML et du dossier US
-# Usage: prepare_context_for_ai "/path/to/file.xml" "/path/to/us-dir"
+# Préparer un contexte riche pour l'IA à partir du dossier US.
+# Supporte 2 modes :
+#   1. Mode API : lit directement extraction-jira.md (produit par le CLI Jira)
+#   2. Mode XML (legacy) : parse le XML et construit le contexte
+#
+# Usage:
+#   prepare_context_for_ai "/path/to/us-dir"                     (mode auto)
+#   prepare_context_for_ai "/path/to/file.xml" "/path/to/us-dir" (mode legacy)
 prepare_context_for_ai() {
-    local xml_file="$1"
-    local us_dir="$2"
-    
-    if [ ! -f "$xml_file" ]; then
-        log_error "Fichier XML introuvable : $xml_file"
-        return 1
+    local arg1="$1"
+    local arg2="${2:-}"
+    local xml_file=""
+    local us_dir=""
+
+    # Détecter le mode d'appel (rétro-compatible)
+    if [ -n "$arg2" ]; then
+        # Mode legacy : prepare_context_for_ai XML_FILE US_DIR
+        xml_file="$arg1"
+        us_dir="$arg2"
+    else
+        # Mode nouveau : prepare_context_for_ai US_DIR
+        us_dir="$arg1"
     fi
-    
+
     if [ ! -d "$us_dir" ]; then
         log_error "Dossier US introuvable : $us_dir"
         return 1
     fi
-    
+
+    local extraction_file="$us_dir/extraction-jira.md"
+
+    # ─── Mode API : extraction-jira.md existe et est riche (produit par le CLI) ───
+    # On détecte un fichier API par la présence du header "# TICKET-ID: ..."
+    if [ -f "$extraction_file" ] && head -1 "$extraction_file" | grep -qE '^# [A-Z]+-[0-9]+:'; then
+        log_info "Utilisation du contexte API (extraction-jira.md)"
+        cat "$extraction_file"
+        return 0
+    fi
+
+    # ─── Mode XML (legacy) : parser le fichier XML ───────────────────────────
+    if [ -z "$xml_file" ]; then
+        # Tenter de trouver le XML correspondant
+        local ticket_key
+        ticket_key=$(get_ticket_key_from_path "$us_dir" 2>/dev/null || echo "")
+        if [ -n "$ticket_key" ]; then
+            xml_file=$(get_xml_file_from_key "$ticket_key" 2>/dev/null || echo "")
+        fi
+    fi
+
+    if [ -z "$xml_file" ] || [ ! -f "$xml_file" ]; then
+        # Dernier recours : utiliser extraction-jira.md tel quel
+        if [ -f "$extraction_file" ]; then
+            log_info "Utilisation du fichier extraction-jira.md existant"
+            cat "$extraction_file"
+            return 0
+        fi
+        log_error "Aucune source de contexte trouvée (ni API, ni XML, ni extraction-jira.md)"
+        return 1
+    fi
+
     # Parser le XML
     if ! parse_xml_file "$xml_file"; then
         return 1
     fi
-    
-    # Extraire toutes les informations pertinentes
-    local extraction_file="$us_dir/extraction-jira.md"
+
     local extraction_content=""
     if [ -f "$extraction_file" ]; then
         extraction_content=$(cat "$extraction_file")
     fi
-    
-    # Extraire les critères d'acceptation
+
     local acceptance_criteria=$(extract_acceptance_criteria "$xml_file" 2>/dev/null || echo "")
-    
-    # Extraire les commentaires
     local comments=$(extract_comments "$xml_file" 200 2>/dev/null || echo "")
     local comments_decoded=$(decode_html_cached "$comments" 2>/dev/null || echo "$comments")
-    
-    # Décoder la description
     local description_decoded=$(decode_html_cached "$DESCRIPTION_SECTION" 2>/dev/null || echo "$DESCRIPTION_SECTION")
-    
-    # Extraire les liens Figma et Miro
     local figma_links=$(extract_figma_links "$xml_file" 2>/dev/null || echo "")
     local miro_links=$(extract_miro_links "$xml_file" 2>/dev/null || echo "")
-    
-    # Extraire le statut, type, priorité
     local status=$(extract_status "$xml_file" 2>/dev/null || echo "")
     local type=$(extract_type "$xml_file" 2>/dev/null || echo "")
     local priority=$(extract_priority "$xml_file" 2>/dev/null || echo "")
-    
-    # Construire le contexte complet
+
     cat <<EOF
 # Contexte complet de la User Story
 
@@ -152,162 +184,17 @@ prepare_cursor_prompt() {
     
     local template_content=$(cat "$template_file")
     
-    # Construire le prompt selon le type de document
-    local instructions=""
-    
-    case "$document_type" in
-        questions)
-            instructions="Génère un document COMPLET et EXHAUSTIF de questions et clarifications au format Markdown.
+    # Charger les instructions depuis les fichiers de prompts externes
+    local prompt_dir="$TEMPLATES_DIR/prompts"
+    local prompt_file="$prompt_dir/${document_type}.md"
 
-INSTRUCTIONS DÉTAILLÉES :
-- Génère le MAXIMUM de questions pertinentes (minimum 50-60 questions, idéalement 80+)
-- Organise les questions par catégorie avec des sous-sections détaillées :
-  * PM : Règles métier, critères d'acceptation, cas limites, comportements edge cases, messages utilisateur, workflows, dépendances métier
-  * Dev : Architecture, validation (client/serveur), API endpoints, stockage, logs, données de test, persistance, sécurité technique, performance, intégrations
-  * Designer : Feedback visuel, états UI, positionnement, responsive, accessibilité, animations, transitions, états de chargement
-- Pour CHAQUE question :
-  * Fournis un contexte DÉTAILLÉ expliquant pourquoi elle est importante
-  * Identifie les risques si la question n'est pas clarifiée
-  * Propose des exemples concrets si pertinent
-- Identifie TOUTES les ambiguïtés dans :
-  * Les critères d'acceptation (interprétations possibles)
-  * La description (zones floues)
-  * Les commentaires (contradictions potentielles)
-- Propose des questions sur :
-  * TOUS les cas limites non couverts explicitement
-  * Les comportements en cas d'erreur (tous les types d'erreurs possibles)
-  * Les données de test nécessaires (formats, tailles, variantes)
-  * Les environnements (dev, staging, preprod, prod)
-  * Les dépendances techniques et métier
-  * Les intégrations avec d'autres systèmes
-  * Les migrations de données si applicable
-  * Les rollbacks et annulations
-  * Les permissions et autorisations
-  * Les performances attendues
-  * Les limites et quotas
-- Analyse en profondeur :
-  * Les scénarios décrits dans les AC pour identifier les zones d'ombre
-  * Les commentaires pour détecter les points soulevés par l'équipe
-  * Les liens de design pour identifier les aspects UI non documentés
-- Utilise le format du template fourni EXACTEMENT
-- Sois ULTRA-exhaustif et créatif : pense à TOUS les aspects possibles
-- Chaque question doit être actionnable et permettre une réponse claire"
-            ;;
-        strategy)
-            instructions="Génère une stratégie de test COMPLÈTE, DÉTAILLÉE et EXHAUSTIVE au format Markdown.
+    if [ ! -f "$prompt_file" ]; then
+        log_error "Type de document non supporté : $document_type (prompt introuvable : $prompt_file)"
+        return 1
+    fi
 
-INSTRUCTIONS DÉTAILLÉES :
-- Identifie TOUS les axes de test pertinents (minimum 10-12 axes, idéalement 15+)
-- Pour CHAQUE axe de test, fournis :
-  * Un objectif clair et détaillé
-  * Une approche méthodologique précise
-  * Des points de vigilance spécifiques et actionnables
-  * Des exemples concrets adaptés au contexte
-  * Des métriques de succès mesurables
-- Axes de test à couvrir en profondeur :
-  * Scénarios nominaux (tous les parcours utilisateur possibles)
-  * Cas limites et robustesse (valeurs extrêmes, conditions limites)
-  * Gestion des erreurs (tous les types d'erreurs possibles avec détails)
-  * Sécurité et autorisations (tous les aspects de sécurité)
-  * Performance (charges, temps de réponse, scalabilité)
-  * Intégration (toutes les intégrations avec détails)
-  * Compatibilité (navigateurs, OS, résolutions, versions)
-  * Accessibilité (WCAG, navigation clavier, lecteurs d'écran)
-  * Régression (toutes les zones impactées)
-  * Migration de données (si applicable)
-  * Rollback et annulation (si applicable)
-- Définis une stratégie ADAPTÉE au contexte :
-  * Métier : Comprends le domaine métier et adapte la stratégie
-  * Technique : Prends en compte l'architecture et les contraintes techniques
-  * Utilisateur : Considère les différents types d'utilisateurs
-- Précise en DÉTAIL :
-  * Prérequis : Environnements, données, comptes, configurations
-  * Données de test : Formats, tailles, variantes, cas limites
-  * Environnements : Dev, staging, preprod avec spécificités
-  * Outils : Outils de test nécessaires, frameworks, scripts
-- Identifie TOUS les risques :
-  * Risques fonctionnels (fonctionnalités impactées)
-  * Risques techniques (performance, sécurité, intégration)
-  * Risques métier (expérience utilisateur, données)
-  * Risques de régression (zones critiques)
-- Définis les priorités de test :
-  * Critiques (bloquants)
-  * Importants (impact significatif)
-  * Normaux (fonctionnalités standard)
-  * Faibles (nice-to-have)
-- Propose un plan de test STRUCTURÉ :
-  * Phases de test (unitaire, intégration, système, acceptation)
-  * Ordre d'exécution logique
-  * Dépendances entre tests
-  * Estimation du temps nécessaire
-- Utilise le format du template fourni EXACTEMENT
-- Sois ULTRA-exhaustif : pense à TOUS les aspects possibles de test
-- Adapte chaque section au contexte spécifique de cette US
-- Fournis des exemples concrets et actionnables pour chaque point"
-            ;;
-        test-cases)
-            instructions="Génère un document COMPLET et EXHAUSTIF de cas de test au format Markdown.
-
-INSTRUCTIONS DÉTAILLÉES :
-- Génère le MAXIMUM de cas de test pertinents (minimum 30-40 scénarios, idéalement 50+)
-- Pour CHAQUE scénario, fournis TOUS les détails suivants :
-  * Un titre CLAIR, DESCRIPTIF et ACTIONNABLE
-  * Des étapes DÉTAILLÉES, NUMÉROTÉES et PRÉCISES :
-    - Chaque étape doit être exécutable telle quelle
-    - Inclus les actions exactes à effectuer
-    - Précise les données à utiliser
-    - Indique les vérifications intermédiaires
-  * Des données de test PRÉCISES et RÉALISTES :
-    - Formats exacts
-    - Tailles spécifiques
-    - Variantes nécessaires
-    - Cas limites (min, max, valeurs spéciales)
-  * Des résultats attendus DÉTAILLÉS avec :
-    - Vérifications spécifiques et mesurables
-    - Messages exacts attendus
-    - Comportements UI précis
-    - États système attendus
-    - Données persistées attendues
-  * Un objectif clair expliquant pourquoi ce test est important
-  * Des prérequis spécifiques si nécessaire
-- Organise par catégories COMPLÈTES :
-  * CAS NOMINAUX : Tous les parcours utilisateur standards (minimum 5-8 scénarios)
-  * CAS LIMITES : Valeurs extrêmes, conditions limites, edge cases (minimum 5-8 scénarios)
-  * CAS D'ERREUR : Tous les types d'erreurs possibles (minimum 5-8 scénarios)
-  * CAS DE PERFORMANCE : Charges, temps de réponse, volumétrie (minimum 3-5 scénarios)
-  * CAS D'INTÉGRATION : Toutes les intégrations (minimum 3-5 scénarios)
-  * CAS DE SÉCURITÉ : CSRF, autorisations, injection (minimum 3-5 scénarios)
-  * CAS DE COMPATIBILITÉ : Navigateurs, OS, résolutions (minimum 2-3 scénarios)
-  * CAS D'ACCESSIBILITÉ : Navigation clavier, lecteurs d'écran (minimum 2-3 scénarios)
-  * CAS DE RÉGRESSION : Zones impactées (minimum 2-3 scénarios)
-- Identifie TOUS les edge cases :
-  * Cas limites non évidents
-  * Comportements inattendus
-  * Conditions rares mais possibles
-  * Interactions complexes
-- Génère des scénarios de régression :
-  * Pour toutes les fonctionnalités connexes
-  * Pour les zones critiques identifiées
-  * Pour les dépendances
-- Adapte les cas de test au contexte métier :
-  * Utilise la terminologie métier exacte
-  * Réfléchit aux workflows réels des utilisateurs
-  * Considère les différents types d'utilisateurs
-  * Prend en compte les contraintes métier
-- Pour chaque critère d'acceptation :
-  * Génère au minimum 2-3 scénarios de test
-  * Couvre le cas nominal ET les cas limites
-  * Inclus les vérifications de régression
-- Utilise le format du template fourni EXACTEMENT
-- Sois ULTRA-exhaustif : pense à TOUS les scénarios possibles
-- Chaque scénario doit être COMPLET, ACTIONNABLE et DIRECTEMENT UTILISABLE pour l'exécution des tests
-- Fournis des exemples concrets et réalistes pour chaque scénario"
-            ;;
-        *)
-            log_error "Type de document non supporté : $document_type"
-            return 1
-            ;;
-    esac
+    local instructions
+    instructions=$(cat "$prompt_file")
     
     # Créer le prompt complet et détaillé
     cat > "$output_file" <<EOF
@@ -367,7 +254,8 @@ EOF
     log_info "   Copiez le contenu et demandez à l'agent Cursor de générer le document"
 }
 
-# Générer directement avec l'agent Cursor (via fichier de prompt)
+# Générer directement avec l'agent Cursor (via CLI ou prompt)
+# Usage: generate_with_cursor_agent "questions" "$context" "$template" "$output"
 generate_with_cursor_agent() {
     local document_type="$1"
     local context_data="$2"
@@ -383,6 +271,34 @@ generate_with_cursor_agent() {
         return 1
     fi
     
+    # Option 3 : Mode mixte — tenter CLI d'abord, puis fallback prompt
+    local cursor_cmd=""
+    if command -v cursor-agent &> /dev/null; then
+        cursor_cmd="cursor-agent"
+    elif command -v cursor &> /dev/null; then
+        cursor_cmd="cursor"
+    fi
+
+    if [ -n "$cursor_cmd" ]; then
+        log_info "🤖 Option 3 (mixte) : utilisation du CLI Cursor pour génération directe..."
+        
+        local prompt_content=$(cat "$prompt_file")
+        local cursor_full_cmd="$cursor_cmd -p --force"
+        if [ -n "${CURSOR_API_KEY:-}" ]; then
+            cursor_full_cmd="$cursor_full_cmd --api-key $CURSOR_API_KEY"
+        fi
+        
+        log_info "   Génération en cours avec Cursor CLI..."
+        if echo "$prompt_content" | $cursor_full_cmd > "$output_file" 2>&1; then
+            log_success "✅ Document généré directement avec Cursor CLI : $output_file"
+            rm -f "$prompt_file"
+            return 0
+        else
+            log_warning "⚠️  Erreur avec Cursor CLI, bascule vers mode prompt (fallback)..."
+        fi
+    fi
+    
+    # Fallback : mode prompt (pour traitement manuel ou via agent dans conversation)
     log_info "📋 Fichier de prompt créé : $prompt_file"
     log_info ""
     log_info "🤖 Pour générer avec l'agent Cursor :"
@@ -398,3 +314,54 @@ generate_with_cursor_agent() {
     echo "$prompt_file"
 }
 
+# Générer directement un document avec l'agent Cursor (voie principale).
+# Supporte contexte API (extraction-jira.md) ET XML (legacy).
+# Usage: generate_document_directly "questions" "$us_dir"
+generate_document_directly() {
+    local document_type="$1"
+    local us_dir="$2"
+
+    if [ ! -d "$us_dir" ]; then
+        log_error "Dossier introuvable : $us_dir"
+        return 1
+    fi
+
+    # Préparer le contexte (mode auto : API ou XML)
+    local context
+    context=$(prepare_context_for_ai "$us_dir")
+    if [ $? -ne 0 ] || [ -z "$context" ]; then
+        log_error "Erreur lors de la préparation du contexte"
+        return 1
+    fi
+
+    # Déterminer le template et le fichier de sortie
+    local template_file=""
+    local output_file=""
+
+    case "$document_type" in
+        questions)
+            template_file="$TEMPLATES_DIR/questions-clarifications-template.md"
+            output_file="$us_dir/01-questions-clarifications.md"
+            ;;
+        strategy)
+            template_file="$TEMPLATES_DIR/strategie-test-template.md"
+            output_file="$us_dir/02-strategie-test.md"
+            ;;
+        test-cases)
+            template_file="$TEMPLATES_DIR/cas-test-template.md"
+            output_file="$us_dir/03-cas-test.md"
+            ;;
+        *)
+            log_error "Type de document invalide : $document_type"
+            return 1
+            ;;
+    esac
+
+    if [ ! -f "$template_file" ]; then
+        log_error "Template introuvable : $template_file"
+        return 1
+    fi
+
+    # Générer avec l'agent Cursor
+    generate_with_cursor_agent "$document_type" "$context" "$template_file" "$output_file"
+}

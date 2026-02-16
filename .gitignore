@@ -13,6 +13,15 @@
 .AppleDouble
 .LSOverride
 
+# Node.js / TypeScript
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+
+# Logs du pipeline
+logs/
+
 # Fichiers temporaires
 *.log
 *.tmp
@@ -36,4 +45,28 @@ ${TMPDIR:-/tmp}/qa_*
 
 # Documentation générée (contenu sensible/propriétaire)
 projets/
+
+# Docs contenant des credentials ou des infos de configuration sensibles
+# (clés API, tokens, emails, URLs d'instance)
+docs/DONNEES-ACCES-*.md
+docs/GUIDE-CONFIGURATION-MCP-*.md
+docs/GUIDE-API-ACCESS-TOKEN-*.md
+docs/INSTRUCTIONS-AJOUT-API-*.md
+docs/VERIFICATION-CONFIGURATION-*.md
+docs/STATUT-FINAL-MCP-*.md
+docs/DIAGNOSTIC-MCP-*.md
+docs/DIFFERENCE-API-KEYS-*.md
+docs/PROBLEME-ACCES-*.md
+docs/ETAPE-FINALE-*.md
+
+# Notes de session de travail/débogage (éphémères, ne pas versionner)
+docs/ANALYSE-TEST-STEPS-*.md
+docs/CORRECTION-ERREUR-*.md
+docs/GUIDE-TRANSFERT-MANUEL-*.md
+docs/INVESTIGATION-*.md
+docs/OPTIMISATIONS-*.md
+docs/RESULTAT-TEST-*.md
+docs/RESUME-TRANSFERT-*.md
+docs/STATUT-FINAL-ACCES-*.md
+docs/TRANSFERT-STEPS-*.md
 

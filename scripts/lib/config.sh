@@ -22,20 +22,58 @@ fi
 
 # Chemins de base (peuvent être surchargés par variables d'environnement)
 BASE_DIR="${QA_BASE_DIR:-$(get_base_dir)}"
-JIRA_DIR="${QA_JIRA_DIR:-$BASE_DIR/Jira}"
-PROJETS_DIR="${QA_PROJETS_DIR:-$BASE_DIR/projets}"
-TEMPLATES_DIR="${QA_TEMPLATES_DIR:-$BASE_DIR/templates}"
+
+# ── Charger project.conf (configuration centralisée) ─────────────────────────
+# Les variables d'environnement existantes ont priorité sur project.conf.
+_PROJECT_CONF="$BASE_DIR/config/project.conf"
+if [ -f "$_PROJECT_CONF" ]; then
+    # Charger chaque ligne KEY=VALUE sans écraser les variables déjà définies
+    while IFS='=' read -r _key _value; do
+        # Ignorer les commentaires et lignes vides
+        [[ "$_key" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "$_key" ]] && continue
+        # Trim les espaces
+        _key=$(echo "$_key" | xargs)
+        _value=$(echo "$_value" | xargs)
+        # Ne pas écraser si la variable est déjà définie dans l'environnement
+        if [ -z "${!_key+x}" ]; then
+            export "$_key=$_value"
+        fi
+    done < "$_PROJECT_CONF"
+fi
+
+# ── Chemins ──────────────────────────────────────────────────────────────────
+
+JIRA_DIR="${QA_JIRA_DIR:-$BASE_DIR/${JIRA_SUBDIR:-Jira}}"
+PROJETS_DIR="${QA_PROJETS_DIR:-$BASE_DIR/${PROJETS_SUBDIR:-projets}}"
+TEMPLATES_DIR="${QA_TEMPLATES_DIR:-$BASE_DIR/${TEMPLATES_SUBDIR:-templates}}"
 SCRIPTS_DIR="${QA_SCRIPTS_DIR:-$BASE_DIR/scripts}"
 
-# Paramètres configurables
-MAX_DESCRIPTION_LINES="${QA_MAX_DESCRIPTION_LINES:-200}"
-MAX_SCENARIOS="${QA_MAX_SCENARIOS:-10}"
-MAX_COMMENTS="${QA_MAX_COMMENTS:-100}"
+# ── Jira ─────────────────────────────────────────────────────────────────────
 
-# Niveau de debug (peut être activé avec DEBUG=true)
+JIRA_BASE_URL="${QA_JIRA_BASE_URL:-${JIRA_BASE_URL:-https://prestashop-jira.atlassian.net}}"
+QA_DOCUMENTED_LABEL="${QA_DOCUMENTED_LABEL:-qa-documented}"
+
+# ── Pipeline ─────────────────────────────────────────────────────────────────
+
+PARALLEL_WORKERS="${PARALLEL_WORKERS:-0}"
+PROCESS_TIMEOUT="${PROCESS_TIMEOUT:-300}"
+
+# ── Limites de contenu ───────────────────────────────────────────────────────
+
+MAX_DESCRIPTION_LINES="${QA_MAX_DESCRIPTION_LINES:-${MAX_DESCRIPTION_LINES:-200}}"
+MAX_SCENARIOS="${QA_MAX_SCENARIOS:-${MAX_SCENARIOS:-10}}"
+MAX_COMMENTS="${QA_MAX_COMMENTS:-${MAX_COMMENTS:-100}}"
+
+# ── Qualité des documents ────────────────────────────────────────────────────
+
+QA_MIN_FILE_SIZE="${QA_MIN_FILE_SIZE:-${MIN_FILE_SIZE:-200}}"
+QA_MIN_SCENARIOS="${QA_MIN_SCENARIOS:-${MIN_SCENARIOS:-2}}"
+QA_MIN_QUESTIONS="${QA_MIN_QUESTIONS:-${MIN_QUESTIONS:-5}}"
+
+# ── Modes ────────────────────────────────────────────────────────────────────
+
 DEBUG="${DEBUG:-false}"
-
-# Mode dry-run (peut être activé avec DRY_RUN=true)
 DRY_RUN="${DRY_RUN:-false}"
 
 # Chemins des scripts (centralisés pour maintenabilité)
@@ -48,6 +86,9 @@ UPDATE_README_SCRIPT="$SCRIPTS_DIR/update-readme-from-xml.sh"
 UPDATE_ALL_READMES_SCRIPT="$SCRIPTS_DIR/update-all-readmes.sh"
 REGENERATE_ALL_DOCS_SCRIPT="$SCRIPTS_DIR/regenerate-all-docs.sh"
 ARCHIVE_TREATMENTS_SCRIPT="$SCRIPTS_DIR/archive-treatments.sh"
+GENERATE_FROM_CONTEXT_SCRIPT="$SCRIPTS_DIR/generate-from-context.sh"
+PROCESS_FROM_API_SCRIPT="$SCRIPTS_DIR/process-from-api.sh"
+QA_PIPELINE_SCRIPT="$SCRIPTS_DIR/qa-pipeline.sh"
 
 # Fonction pour afficher la configuration
 show_config() {

@@ -1,0 +1,235 @@
+# =============================================================================
+# GitHub Actions — Pipeline QA automatisé
+#
+# Ce workflow s'exécute :
+#   - Quotidiennement à 8h00 UTC (cron)
+#   - Manuellement via workflow_dispatch
+#
+# Il détecte les tickets Jira sans documentation QA, les traite en parallèle,
+# et envoie une notification en cas de nouveaux tickets ou d'échecs.
+# =============================================================================
+
+name: QA Documentation Pipeline
+
+on:
+  schedule:
+    # Exécution quotidienne à 8h00 UTC (10h00 Paris)
+    - cron: '0 8 * * 1-5'  # Lundi à vendredi
+
+  workflow_dispatch:
+    inputs:
+      projects:
+        description: 'Projets Jira (séparés par des virgules)'
+        required: false
+        default: 'SPEX,ACCOUNT,MME,EB,DATA'
+      max_tickets:
+        description: 'Nombre max de tickets à traiter'
+        required: false
+        default: '10'
+      parallel:
+        description: 'Nombre de workers parallèles'
+        required: false
+        default: '4'
+      dry_run:
+        description: 'Mode dry-run (true/false)'
+        required: false
+        default: 'false'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ── Détection des tickets ──────────────────────────────────────────────────
+
+  detect:
+    name: Détecter les tickets sans doc QA
+    runs-on: ubuntu-latest
+    outputs:
+      ticket_count: ${{ steps.detect.outputs.count }}
+      has_tickets: ${{ steps.detect.outputs.has_tickets }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: jira-mcp-server/package-lock.json
+
+      - name: Installer et builder le CLI
+        working-directory: jira-mcp-server
+        run: |
+          npm ci
+          npm run build
+
+      - name: Détecter les tickets
+        id: detect
+        working-directory: jira-mcp-server
+        env:
+          JIRA_HOST: ${{ secrets.JIRA_HOST }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          PROJECTS="${{ github.event.inputs.projects || 'SPEX,ACCOUNT,MME,EB,DATA' }}"
+          MAX="${{ github.event.inputs.max_tickets || '10' }}"
+
+          # Récupérer les tickets en format keys
+          TICKETS=$(node dist/cli.js detect --projects "$PROJECTS" --max "$MAX" --format keys 2>/dev/null || echo "")
+          COUNT=$(echo "$TICKETS" | grep -c '^[A-Z]' || echo "0")
+
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "has_tickets=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$COUNT ticket(s) détecté(s) nécessitant une documentation QA"
+            echo "$TICKETS" | head -20
+          else
+            echo "has_tickets=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Tous les tickets sont documentés."
+          fi
+
+  # ── Traitement des tickets ─────────────────────────────────────────────────
+
+  process:
+    name: Traiter les tickets
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.has_tickets == 'true' && github.event.inputs.dry_run != 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: jira-mcp-server/package-lock.json
+
+      - name: Installer et builder le CLI
+        working-directory: jira-mcp-server
+        run: |
+          npm ci
+          npm run build
+
+      - name: Créer le fichier .env
+        working-directory: jira-mcp-server
+        run: |
+          cat > .env <<EOF
+          JIRA_HOST=${{ secrets.JIRA_HOST }}
+          JIRA_EMAIL=${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN=${{ secrets.JIRA_API_TOKEN }}
+          XRAY_CLIENT_ID=${{ secrets.XRAY_CLIENT_ID }}
+          XRAY_CLIENT_SECRET=${{ secrets.XRAY_CLIENT_SECRET }}
+          EOF
+
+      - name: Traiter les tickets
+        env:
+          JIRA_HOST: ${{ secrets.JIRA_HOST }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          PROJECTS="${{ github.event.inputs.projects || 'SPEX,ACCOUNT,MME,EB,DATA' }}"
+          MAX="${{ github.event.inputs.max_tickets || '10' }}"
+          PARALLEL="${{ github.event.inputs.parallel || '4' }}"
+
+          bash scripts/qa-pipeline.sh process-all \
+            --projects "$PROJECTS" \
+            --max "$MAX" \
+            --parallel "$PARALLEL"
+
+      - name: Upload des documents générés
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-documents-${{ github.run_number }}
+          path: projets/
+          retention-days: 30
+
+  # ── Tests ──────────────────────────────────────────────────────────────────
+
+  test:
+    name: Tests unitaires
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: jira-mcp-server/package-lock.json
+
+      - name: Installer les dépendances
+        working-directory: jira-mcp-server
+        run: npm ci
+
+      - name: Lint TypeScript
+        working-directory: jira-mcp-server
+        run: npm run lint
+
+      - name: Type-check TypeScript
+        working-directory: jira-mcp-server
+        run: npm run type-check
+
+      - name: Tests TypeScript (avec couverture)
+        working-directory: jira-mcp-server
+        run: npx jest --config jest.config.cjs --ci --coverage
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ github.run_number }}
+          path: jira-mcp-server/coverage/
+          retention-days: 14
+
+      - name: Tests Bash
+        run: bash tests/run-all-tests.sh
+
+  # ── Notification ───────────────────────────────────────────────────────────
+
+  notify:
+    name: Notifications
+    runs-on: ubuntu-latest
+    needs: [detect, process]
+    if: always()
+
+    steps:
+      - name: Notification Slack (succès)
+        if: needs.process.result == 'success' && secrets.SLACK_WEBHOOK_URL != ''
+        run: |
+          COUNT="${{ needs.detect.outputs.ticket_count }}"
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"text\": \":white_check_mark: Pipeline QA : $COUNT ticket(s) traite(s) avec succes\",
+              \"blocks\": [
+                {
+                  \"type\": \"section\",
+                  \"text\": {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \":white_check_mark: *Pipeline QA Doc* — $COUNT ticket(s) traite(s)\\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Voir le run>\"
+                  }
+                }
+              ]
+            }"
+
+      - name: Notification Slack (échec)
+        if: needs.process.result == 'failure' && secrets.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"text\": \":x: Pipeline QA : echec du traitement\",
+              \"blocks\": [
+                {
+                  \"type\": \"section\",
+                  \"text\": {
+                    \"type\": \"mrkdwn\",
+                    \"text\": \":x: *Pipeline QA Doc* — Echec du traitement\\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Voir le run>\"
+                  }
+                }
+              ]
+            }"

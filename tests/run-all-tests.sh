@@ -32,6 +32,10 @@ TEST_FILES=(
     "test-common-functions.sh"
     "test-xml-utils.sh"
     "test-processing-utils.sh"
+    "test-generate-from-context.sh"
+    "test-validate-docs.sh"
+    "test-notify.sh"
+    "test-metrics.sh"
 )
 
 # Exécuter chaque test

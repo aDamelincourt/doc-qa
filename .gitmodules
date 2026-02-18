@@ -1,0 +1,3 @@
+[submodule "jira-mcp-server"]
+	path = jira-mcp-server
+	url = https://github.com/aDamelincourt/jira-mcp-server.git

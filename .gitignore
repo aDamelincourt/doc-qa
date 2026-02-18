@@ -5,6 +5,7 @@
 # IDEs
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 
@@ -27,6 +28,7 @@ logs/
 *.tmp
 *.swp
 *.swo
+*.bak
 *~
 
 # Fichiers de test

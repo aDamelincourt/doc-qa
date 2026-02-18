@@ -33,27 +33,13 @@ CLI_DIR="$BASE_DIR/jira-mcp-server"
 CLI_CMD="node $CLI_DIR/dist/cli.js"
 PROCESS_SCRIPT="$SCRIPT_DIR/process-from-api.sh"
 
+# Charger les fonctions communes (logging, etc.)
+source "$SCRIPT_DIR/lib/common-functions.sh"
+
 # Fichier de log pour les erreurs stderr (au lieu de /dev/null)
 LOG_DIR="${BASE_DIR}/logs"
 mkdir -p "$LOG_DIR" 2>/dev/null || LOG_DIR="/tmp"
 LOG_FILE="${LOG_DIR}/qa-pipeline-$(date +%Y%m%d-%H%M%S).log"
-
-# Couleurs
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
-BOLD='\033[1m'
-
-# ── Fonctions utilitaires ────────────────────────────────────────────────────
-
-log_title() { echo -e "\n${BOLD}${CYAN}═══ $1 ═══${NC}\n"; }
-log_info()  { echo -e "${BLUE}[INFO]${NC} $1"; }
-log_ok()    { echo -e "${GREEN}[OK]${NC} $1"; }
-log_warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
-log_err()   { echo -e "${RED}[ERR]${NC} $1"; }
 
 # ── Vérifications préalables ─────────────────────────────────────────────────
 

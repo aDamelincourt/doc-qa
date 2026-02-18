@@ -198,10 +198,12 @@ jobs:
 
     steps:
       - name: Notification Slack (succès)
-        if: needs.process.result == 'success' && secrets.SLACK_WEBHOOK_URL != ''
+        if: needs.process.result == 'success' && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           COUNT="${{ needs.detect.outputs.ticket_count }}"
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
             -d "{
               \"text\": \":white_check_mark: Pipeline QA : $COUNT ticket(s) traite(s) avec succes\",
@@ -217,9 +219,11 @@ jobs:
             }"
 
       - name: Notification Slack (échec)
-        if: needs.process.result == 'failure' && secrets.SLACK_WEBHOOK_URL != ''
+        if: needs.process.result == 'failure' && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
             -d "{
               \"text\": \":x: Pipeline QA : echec du traitement\",

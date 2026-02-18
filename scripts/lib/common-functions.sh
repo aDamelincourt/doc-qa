@@ -95,29 +95,39 @@ decode_html_simple() {
     echo "$input" | sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g; s/&quot;/"/g; s/&apos;/'"'"'/g; s/&#8232;/\n/g; s/&#160;/ /g; s/&#8211;/-/g; s/&#8212;/--/g; s/&#8220;/"/g; s/&#8221;/"/g; s/&#8216;/'"'"'/g; s/&#8217;/'"'"'/g; s/&#8230;/.../g; s/&#39;/'"'"'/g'
 }
 
-# Fonction pour logger avec niveau
-# Usage: log_info "message" / log_error "message" / log_debug "message"
-log_info() {
-    echo "ℹ️  $1" >&2
-}
+# ── Couleurs (si terminal interactif) ─────────────────────────────────────────
+if [ -t 2 ]; then
+    _CLR_RED='\033[0;31m'
+    _CLR_GREEN='\033[0;32m'
+    _CLR_YELLOW='\033[1;33m'
+    _CLR_BLUE='\033[0;34m'
+    _CLR_CYAN='\033[0;36m'
+    _CLR_BOLD='\033[1m'
+    _CLR_NC='\033[0m'
+else
+    _CLR_RED='' _CLR_GREEN='' _CLR_YELLOW='' _CLR_BLUE=''
+    _CLR_CYAN='' _CLR_BOLD='' _CLR_NC=''
+fi
 
-log_error() {
-    echo "❌ $1" >&2
-}
+# ── Logging standardise ──────────────────────────────────────────────────────
+# Deux jeux de noms pour compatibilite :
+#   - Emoji-based : log_info / log_error / log_success / log_warning / log_debug
+#   - Color-based : log_title / log_ok / log_warn / log_err (utilises par qa-pipeline.sh)
 
-log_success() {
-    echo "✅ $1" >&2
-}
-
-log_warning() {
-    echo "⚠️  $1" >&2
-}
-
+log_info()    { echo -e "${_CLR_BLUE}[INFO]${_CLR_NC} $1" >&2; }
+log_error()   { echo -e "${_CLR_RED}[ERR]${_CLR_NC} $1" >&2; }
+log_success() { echo -e "${_CLR_GREEN}[OK]${_CLR_NC} $1" >&2; }
+log_warning() { echo -e "${_CLR_YELLOW}[WARN]${_CLR_NC} $1" >&2; }
 log_debug() {
     if [ "${DEBUG:-false}" = "true" ]; then
-        echo "🔍 DEBUG: $1" >&2
+        echo -e "🔍 DEBUG: $1" >&2
     fi
 }
+
+log_title() { echo -e "\n${_CLR_BOLD}${_CLR_CYAN}═══ $1 ═══${_CLR_NC}\n" >&2; }
+log_ok()    { log_success "$1"; }
+log_warn()  { log_warning "$1"; }
+log_err()   { log_error "$1"; }
 
 # Fonction pour valider qu'un fichier existe
 # Usage: validate_file "/path/to/file"

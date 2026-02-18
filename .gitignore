@@ -2,10 +2,11 @@
 .env
 .env.local
 
-# IDEs
+# IDEs et outils locaux
 .vscode/
 .idea/
 .cursor/
+.obsidian/
 *.swp
 *.swo
 

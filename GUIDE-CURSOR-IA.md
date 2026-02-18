@@ -1,269 +1,128 @@
-# 🤖 Guide d'utilisation de Cursor IA pour génération de documents QA
+# Guide d'utilisation de Cursor IA pour la generation de documents QA
 
-## 🎯 Objectif
+## Objectif
 
-Ce guide explique comment utiliser l'agent Cursor IA (moi) pour générer des documents QA **complets, exhaustifs et détaillés** à partir des exports XML Jira.
+Ce guide explique comment l'IA Cursor est integree dans le pipeline QA pour
+generer automatiquement les 3 documents de documentation (questions, strategie,
+cas de test) a partir des tickets Jira.
 
 ---
 
-## 🚀 Workflow recommandé
+## Workflow principal (automatique)
 
-### Étape 1 : Traiter le fichier XML
+### Via le pipeline (recommande)
+
+Le pipeline utilise automatiquement Cursor IA comme voie preponderante.
+Il suffit de lancer le traitement d'un ticket :
 
 ```bash
+# Traiter un ticket via l'API Jira
+make process T=SPEX-3143
+
+# Ou directement
+./scripts/process-from-api.sh SPEX-3143
+```
+
+Le pipeline execute automatiquement la chaine de generation avec 3 niveaux
+de fallback :
+
+1. **Cursor IA** (voie preponderante) -- generation directe via `cursor-agent`
+2. **Script Bash** (`generate-from-context.sh`) -- generation a partir du contexte extrait
+3. **Template placeholder** -- si tout echoue, un template vide est cree
+
+### Via le CLI Jira standalone
+
+```bash
+# Extraire le contexte d'un ticket (sortie Markdown)
+node dist/cli.js context SPEX-3143 > extraction.md
+
+# Traiter tous les tickets sans doc QA
+make process-all
+```
+
+---
+
+## Workflow legacy (XML)
+
+Pour les tickets disponibles uniquement en export XML :
+
+```bash
+# Traiter un fichier XML
 ./scripts/process-xml-file.sh "Jira/ACCOUNT/ACCOUNT-2608.xml"
 ```
 
-Le script va :
-1. ✅ Créer la structure de dossiers
-2. ✅ Extraire toutes les données du XML
-3. ✅ Générer `extraction-jira.md` (complet automatiquement)
-4. ✅ Préparer les prompts détaillés pour Cursor IA
-5. ✅ Afficher les prompts dans la console
-
-### Étape 2 : Utiliser les prompts avec l'agent Cursor
-
-Le script affiche les prompts complets dans la console. **Copiez chaque prompt** et donnez-le à l'agent Cursor (moi) dans cette conversation.
-
-**Exemple de commande à me donner** :
-
-```
-Génère le document questions en suivant exactement ce prompt :
-
-[Collez ici le contenu complet du prompt affiché par le script]
-```
-
-### Étape 3 : Sauvegarder les documents générés
-
-Une fois que j'ai généré le contenu, copiez-le et sauvegardez-le dans le fichier correspondant :
-- `projets/ACCOUNT/us-2608/01-questions-clarifications.md`
-- `projets/ACCOUNT/us-2608/02-strategie-test.md`
-- `projets/ACCOUNT/us-2608/03-cas-test.md`
+Le meme mecanisme de fallback s'applique.
 
 ---
 
-## 📋 Scripts disponibles
+## Generation manuelle avec prompts
 
-### 1. Générer un document spécifique
+Si le CLI Cursor n'est pas installe ou que la generation automatique echoue,
+les scripts preparent des prompts optimises :
+
+1. Les prompts sont affiches dans la console
+2. Copier le prompt dans l'interface Cursor (agent)
+3. L'agent genere le document
+4. Sauvegarder le resultat dans le fichier cible
+
+### Scripts de generation par type
 
 ```bash
-# Questions de clarifications
-./scripts/generate-with-cursor-direct.sh questions projets/ACCOUNT/us-2608
+# Generer un type de document specifique
+./scripts/generate-with-cursor.sh questions projets/ACCOUNT/us-2608
+./scripts/generate-with-cursor.sh strategy projets/ACCOUNT/us-2608
+./scripts/generate-with-cursor.sh test-cases projets/ACCOUNT/us-2608
 
-# Stratégie de test
-./scripts/generate-with-cursor-direct.sh strategy projets/ACCOUNT/us-2608
-
-# Cas de test
-./scripts/generate-with-cursor-direct.sh test-cases projets/ACCOUNT/us-2608
-```
-
-### 2. Générer tous les documents d'un coup
-
-```bash
-./scripts/generate-with-cursor-direct.sh all projets/ACCOUNT/us-2608
-```
-
-Le script affichera les 3 prompts complets que vous pourrez me donner un par un.
-
----
-
-## 🎓 Avantages de l'utilisation de Cursor IA
-
-### ✅ Exhaustivité
-- Génère **50-80+ questions** au lieu de 30-40
-- Génère **30-50+ cas de test** au lieu de 15-25
-- Identifie **tous les axes de test** pertinents (15+ au lieu de 8)
-
-### ✅ Détails
-- Chaque section est **ultra-détaillée** avec exemples concrets
-- Les questions incluent le **contexte et les risques**
-- Les cas de test sont **actionnables** avec étapes précises
-
-### ✅ Contexte
-- **Comprend le domaine métier** et adapte le contenu
-- **Analyse en profondeur** les AC et la description
-- **Identifie les edge cases** non évidents
-
-### ✅ Qualité
-- Contenu **directement utilisable** sans modification
-- **Terminologie exacte** du projet
-- **Formatage Markdown** correct
-
----
-
-## 📝 Format des prompts
-
-Les prompts préparés contiennent :
-
-1. **🎯 OBJECTIF** : Ce qui doit être généré
-2. **📋 CONTEXTE COMPLET** : Toutes les données de la US
-   - Informations générales
-   - Description complète
-   - Critères d'acceptation formatés
-   - Commentaires de l'équipe
-   - Liens de design (Figma, Miro)
-   - Extraction Jira complète
-3. **📝 TEMPLATE** : Format à suivre exactement
-4. **🎓 INSTRUCTIONS DÉTAILLÉES** : Instructions ultra-détaillées
-5. **✅ CRITÈRES DE QUALITÉ** : Standards à respecter
-6. **🚀 TÂCHE** : Ce que l'agent doit faire
-
----
-
-## 🔄 Workflow complet avec exemple
-
-### Exemple : ACCOUNT-2608
-
-```bash
-# 1. Traiter le XML
-./scripts/process-xml-file.sh "Jira/ACCOUNT/ACCOUNT-2608.xml"
-```
-
-Le script affiche :
-```
-📝 PROMPT PRÊT POUR L'AGENT CURSOR IA
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 CONTENU DU PROMPT (à copier ci-dessous)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# Prompt pour génération questions avec l'agent Cursor IA
-...
-[Contenu complet du prompt]
-...
-```
-
-### 2. Copier le prompt et me le donner
-
-Dans cette conversation, dites-moi :
-
-```
-Génère le document questions en suivant exactement ce prompt :
-
-# Prompt pour génération questions avec l'agent Cursor IA
-
-## 🎯 OBJECTIF
-...
-[Collez TOUT le contenu du prompt]
-...
-```
-
-### 3. Je génère le document complet
-
-Je vais générer un document Markdown complet avec :
-- 50-80+ questions pertinentes
-- Contexte détaillé pour chaque question
-- Organisation par catégories
-- Exemples concrets
-
-### 4. Sauvegarder le résultat
-
-Copiez le contenu généré et sauvegardez-le dans :
-```
-projets/ACCOUNT/us-2608/01-questions-clarifications.md
+# Generer les 3 documents
+./scripts/generate-with-cursor.sh all projets/ACCOUNT/us-2608
 ```
 
 ---
 
-## 💡 Astuces
+## Qualite de generation : Cursor IA vs Bash
 
-### Pour obtenir encore plus de détails
-
-Quand vous me donnez le prompt, vous pouvez ajouter :
-
-```
-Génère le document questions en suivant exactement ce prompt :
-
-[Prompt complet]
-
-IMPORTANT : Sois encore plus exhaustif et génère au minimum 80 questions avec des détails très précis pour chaque question.
-```
-
-### Pour régénérer un document
-
-Si vous voulez régénérer un document existant :
-
-```bash
-./scripts/generate-with-cursor-direct.sh questions projets/ACCOUNT/us-2608
-```
-
-Puis donnez-moi le nouveau prompt.
-
-### Pour traiter plusieurs US
-
-```bash
-# Traiter tous les XML non traités
-./scripts/process-unprocessed.sh
-
-# Puis pour chaque US, générer les prompts
-./scripts/generate-with-cursor-direct.sh all projets/ACCOUNT/us-2608
-```
-
----
-
-## 📊 Comparaison : Bash vs Cursor IA
-
-| Aspect | Génération Bash | Génération Cursor IA |
+| Aspect | Generation Bash | Generation Cursor IA |
 |--------|----------------|---------------------|
-| **Questions** | 30-40 questions | 50-80+ questions |
-| **Cas de test** | 15-25 scénarios | 30-50+ scénarios |
-| **Stratégie** | 8 axes de test | 15+ axes de test |
-| **Détails** | Basiques | Ultra-détaillés |
-| **Contexte** | Patterns simples | Compréhension profonde |
-| **Edge cases** | Limités | Exhaustifs |
-| **Actionnabilité** | Moyenne | Directement utilisable |
+| Questions | 30-40 | 50-80+ |
+| Cas de test | 15-25 scenarios | 30-50+ scenarios |
+| Strategie | 8 axes de test | 15+ axes de test |
+| Details | Basiques | Contextuels et approfondis |
+| Edge cases | Limites | Exhaustifs |
 
 ---
 
-## ✅ Checklist de génération
+## Prerequis
 
-- [ ] XML traité avec `process-xml-file.sh`
-- [ ] Prompts affichés dans la console
-- [ ] Prompt questions copié et donné à l'agent Cursor
-- [ ] Document questions généré et sauvegardé
-- [ ] Prompt stratégie copié et donné à l'agent Cursor
-- [ ] Document stratégie généré et sauvegardé
-- [ ] Prompt cas de test copié et donné à l'agent Cursor
-- [ ] Document cas de test généré et sauvegardé
-- [ ] Tous les documents vérifiés et validés
+- **CLI Cursor** : Voir [docs/INSTALLATION-CURSOR-CLI.md](docs/INSTALLATION-CURSOR-CLI.md)
+  pour l'installation et la configuration de la cle API
+- **Configuration avancee** : Voir [docs/CONFIGURATION-CURSOR-IA.md](docs/CONFIGURATION-CURSOR-IA.md)
+  pour le detail des 3 options d'integration
 
 ---
 
-## 🆘 Dépannage
+## Depannage
 
-### Le prompt n'est pas affiché
+### La generation automatique ne se lance pas
 
-Vérifiez que :
-- Le fichier XML existe et est valide
-- Le dossier US existe
-- Les bibliothèques sont correctement chargées
+1. Verifier que le CLI Cursor est installe : `cursor-agent --version`
+2. Verifier que `CURSOR_API_KEY` est definie : `echo $CURSOR_API_KEY`
+3. Consulter les logs dans `logs/` pour le detail des erreurs
 
-### L'agent Cursor ne génère pas assez de détails
+### La generation Bash prend le relais au lieu de Cursor
 
-Ajoutez dans votre demande :
-```
-IMPORTANT : Sois ultra-exhaustif et génère le maximum de détails possibles.
-```
+C'est le comportement attendu si le CLI n'est pas disponible.
+Le fallback est transparent -- les documents sont quand meme generes.
 
-### Le document généré n'est pas au bon format
+### Les documents generes sont trop courts
 
-Vérifiez que vous avez copié **TOUT** le prompt, y compris la section "Template à suivre".
+En mode Bash (fallback), la generation est plus basique.
+Installer le CLI Cursor pour obtenir des documents plus complets.
 
 ---
 
-## 📚 Ressources
+## Voir aussi
 
-- **Scripts** : `scripts/README.md`
-- **Fonctionnement** : `FONCTIONNEMENT-PROJET.md`
-- **Templates** : `templates/README.md`
-
----
-
-## 🎯 Résultat attendu
-
-Avec Cursor IA, vous obtiendrez des documents :
-- ✅ **Complets** : Tous les aspects couverts
-- ✅ **Détaillés** : Chaque section est approfondie
-- ✅ **Actionnables** : Directement utilisables par l'équipe QA
-- ✅ **Contextuels** : Adaptés au domaine métier spécifique
-- ✅ **Professionnels** : Formatage et structure parfaits
-
+- [docs/INSTALLATION-CURSOR-CLI.md](docs/INSTALLATION-CURSOR-CLI.md) -- Installation CLI et cle API
+- [docs/CONFIGURATION-CURSOR-IA.md](docs/CONFIGURATION-CURSOR-IA.md) -- Options d'integration
+- [scripts/README.md](scripts/README.md) -- Documentation des scripts
+- [templates/README.md](templates/README.md) -- Templates de prompts

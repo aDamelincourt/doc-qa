@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Script pour traiter tous les fichiers XML non traités
+# Script pour traiter tous les fichiers XML non traités (workflow legacy XML).
+# Pour le workflow API (recommande), utiliser : ./scripts/qa-pipeline.sh process-all
 # Usage: ./scripts/process-unprocessed.sh
 
 set -euo pipefail

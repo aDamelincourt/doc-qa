@@ -120,6 +120,19 @@ Installer le CLI Cursor pour obtenir des documents plus complets.
 
 ---
 
+## Pipeline complet et sous-agents
+
+Ordre recommande apres generation des documents :
+
+1. **validate** — Valider les documents (automatique apres process)
+2. **sync-xray** — Envoyer les cas de test et pas de tests vers Xray (validation lancee avant sync)
+3. **sync-notion** — Envoyer 01/02/03 dans Notion (Projet → EPIC → US/Bug)
+4. **validator** (sous-agent) — En fin de chaîne : revue qualite, refs Jira, bugs/risques
+
+Les sous-agents Cursor (analyste-req, test-writer, infra-builder, validator) sont decrits dans [.cursor/agents/README.md](.cursor/agents/README.md). Utiliser le sous-agent **validator** en dernier pour verifier la doc et les references Jira.
+
+---
+
 ## Voir aussi
 
 - [docs/INSTALLATION-CURSOR-CLI.md](docs/INSTALLATION-CURSOR-CLI.md) -- Installation CLI et cle API

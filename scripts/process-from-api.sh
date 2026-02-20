@@ -70,7 +70,7 @@ source "$LIB_DIR/processing-utils.sh"
 # ── Chemin du CLI Jira ───────────────────────────────────────────────────────
 
 CLI_DIR="$BASE_DIR/jira-mcp-server"
-CLI_CMD="node $CLI_DIR/dist/cli.js"
+CLI_JS="$CLI_DIR/dist/cli.js"
 
 # Fichier de log pour capturer stderr des commandes API
 LOG_DIR="${BASE_DIR}/logs"
@@ -112,7 +112,7 @@ trap cleanup_on_error ERR
 log_info "Extraction du contexte pour $TICKET_ID via l'API Jira..."
 echo ""
 
-CONTEXT_OUTPUT=$(cd "$CLI_DIR" && $CLI_CMD context "$TICKET_ID" 2>>"$LOG_FILE") || {
+CONTEXT_OUTPUT=$(cd "$CLI_DIR" && node "$CLI_JS" context "$TICKET_ID" 2>>"$LOG_FILE") || {
     log_error "Impossible d'extraire le contexte pour $TICKET_ID (voir $LOG_FILE)"
     log_info "  Vérifier les identifiants dans jira-mcp-server/.env"
     log_info "  Vérifier que le ticket existe : $JIRA_BASE_URL/browse/$TICKET_ID"
@@ -189,6 +189,41 @@ fi
 echo "$CONTEXT_OUTPUT" > "$US_DIR/extraction-jira.md"
 log_success "extraction-jira.md créé (contexte API)"
 
+# ── Extraire métadonnées (parent/EPIC, type) pour Notion et historique ───────
+# Format extraction-jira : "- **Type**: Story" et "- **Parent/Epic**: KEY (Summary)" ou "Aucun"
+PARENT_KEY=""
+ISSUE_TYPE="Story"
+if [ -f "$US_DIR/extraction-jira.md" ]; then
+    _type_line=$(grep -E '^\s*-\s+\*\*Type\*\*:' "$US_DIR/extraction-jira.md" | head -1)
+    if [ -n "$_type_line" ]; then
+        ISSUE_TYPE=$(echo "$_type_line" | sed -E 's/.*\*\*Type\*\*:\s*//' | tr -d '\r\n' | xargs)
+    fi
+    _parent_line=$(grep -E '^\s*-\s+\*\*Parent/Epic\*\*:' "$US_DIR/extraction-jira.md" | head -1)
+    if [ -n "$_parent_line" ] && ! echo "$_parent_line" | grep -qE 'Aucun\s*$'; then
+        PARENT_KEY=$(echo "$_parent_line" | sed -E 's/.*\*\*Parent\/Epic\*\*:\s*([A-Za-z]+-[0-9]+).*/\1/' | tr -d '\r\n' | xargs)
+    fi
+fi
+
+# Écrire meta.json dans le dossier US (pour sync-notion et rapports)
+META_JSON="$US_DIR/meta.json"
+if command -v python3 &>/dev/null; then
+    python3 <<PYEOF
+import json
+parent = "$PARENT_KEY".strip() or None
+meta = {
+    "ticket_key": "$KEY",
+    "projectKey": "$PROJECT_DIR",
+    "parentKey": parent,
+    "issuetype": "$ISSUE_TYPE"
+}
+with open("$META_JSON", "w", encoding="utf-8") as f:
+    json.dump(meta, f, indent=2, ensure_ascii=False)
+PYEOF
+else
+    echo "{\"ticket_key\":\"$KEY\",\"projectKey\":\"$PROJECT_DIR\",\"parentKey\":\"${PARENT_KEY:-}\",\"issuetype\":\"$ISSUE_TYPE\"}" > "$META_JSON"
+fi
+log_info "Métadonnées enregistrées : projet=$PROJECT_DIR, parent=${PARENT_KEY:-Aucun}, type=$ISSUE_TYPE"
+
 # ── Créer le README ──────────────────────────────────────────────────────────
 
 TEMPLATE_FILE="$TEMPLATES_DIR/us-readme-template.md"
@@ -229,29 +264,44 @@ fi
 # Script de génération depuis le contexte (fallback sans XML)
 GENERATE_CONTEXT_SCRIPT="$SCRIPTS_DIR/generate-from-context.sh"
 
+# Vérifie rapidement si le fichier ressemble à du Markdown QA (pas à l'écran de connexion Cursor).
+is_sensible_qa_content() {
+    local f="$1"
+    [ ! -f "$f" ] || [ ! -s "$f" ] && return 1
+    if grep -q "Press any key to sign in\|Cursor Agent" "$f" 2>/dev/null; then return 1; fi
+    head -30 "$f" | grep -qE '^(#+ |## |\- )' 2>/dev/null || return 1
+    return 0
+}
+
 # Fonction pour générer un document avec fallback en 3 niveaux :
-#   1. Cursor AI (meilleure qualité)
-#   2. generate-from-context.sh (bon, sans XML)
+#   1. Cursor AI (CLI cursor-agent/cursor — si disponible et sortie valide)
+#   2. generate-from-context.sh (génération depuis extraction-jira.md, sans Cursor)
 #   3. Placeholder (dernier recours)
+# En mode non-interactif, le CLI Cursor peut écrire un écran de connexion dans le fichier ;
+# on détecte ce cas et on bascule sur le niveau 2.
 generate_doc() {
     local doc_type="$1"
     local doc_file="$2"
 
     log_info "Génération de $doc_file..."
 
-    # Niveau 1 : Cursor AI
+    # Niveau 1 : Cursor AI (CLI)
     if type generate_document_directly &>/dev/null; then
         if generate_document_directly "$doc_type" "$US_DIR" 2>/dev/null; then
             if [ -f "$US_DIR/$doc_file" ] && [ -s "$US_DIR/$doc_file" ]; then
-                log_success "$doc_file généré avec Cursor IA"
-                return 0
+                if is_sensible_qa_content "$US_DIR/$doc_file"; then
+                    log_success "$doc_file généré avec Cursor IA"
+                    return 0
+                fi
+                log_warning "  Contenu invalide (écran Cursor ?), bascule vers génération depuis le contexte."
+                rm -f "$US_DIR/$doc_file"
             fi
         fi
     fi
 
     # Niveau 2 : Générateur depuis le contexte (extraction-jira.md)
     if [ -f "$GENERATE_CONTEXT_SCRIPT" ]; then
-        log_info "  Fallback : génération depuis le contexte API..."
+        log_info "  Génération depuis le contexte API (extraction-jira.md)..."
         if bash "$GENERATE_CONTEXT_SCRIPT" "$doc_type" "$US_DIR" 2>/dev/null; then
             if [ -f "$US_DIR/$doc_file" ] && [ -s "$US_DIR/$doc_file" ]; then
                 log_success "$doc_file généré depuis le contexte"
@@ -290,6 +340,9 @@ echo ""
 
 # ── Enregistrer dans l'historique ────────────────────────────────────────────
 
+export RECORD_PROJECT_KEY="$PROJECT_DIR"
+export RECORD_PARENT_KEY="$PARENT_KEY"
+export RECORD_ISSUE_TYPE="$ISSUE_TYPE"
 record_treatment "$KEY" "$US_DIR"
 log_success "Traitement enregistré dans l'historique"
 
@@ -297,7 +350,7 @@ log_success "Traitement enregistré dans l'historique"
 
 if [ "$SKIP_LABEL" != true ]; then
     log_info "Ajout du label '$QA_DOCUMENTED_LABEL' sur $KEY..."
-    if cd "$CLI_DIR" && $CLI_CMD label add "$KEY" "$QA_DOCUMENTED_LABEL" 2>>"$LOG_FILE"; then
+    if cd "$CLI_DIR" && node "$CLI_JS" label add "$KEY" "$QA_DOCUMENTED_LABEL" 2>>"$LOG_FILE"; then
         log_success "Label '$QA_DOCUMENTED_LABEL' ajouté sur $KEY"
     else
         log_warning "Impossible d'ajouter le label (non bloquant)"

@@ -27,8 +27,8 @@ CLI := node $(CLI_DIR)/dist/cli.js
 
 .PHONY: help setup build detect process process-force process-all process-all-dry \
         generate process-xml process-unprocessed status \
-        sync-xray sync-xray-dry read-xray-steps \
-        validate metrics update-readmes export-notion archive test clean
+        sync-xray sync-xray-dry read-xray-steps connection-test \
+        validate metrics update-readmes export-notion sync-notion archive test clean
 
 # ─── Aide ────────────────────────────────────────────────────────────────────
 
@@ -45,6 +45,9 @@ help: ## Affiche cette aide
 	@echo "  XRAY CLOUD :"
 	@grep -E '^(sync-xray|read-xray)' $(MAKEFILE_LIST) | grep '##' | awk -F ':|##' '{printf "    make %-20s %s\n", $$1, $$NF}'
 	@echo ""
+	@echo "  CONNEXION :"
+	@grep -E '^connection-test:' $(MAKEFILE_LIST) | grep '##' | awk -F ':|##' '{printf "    make %-20s %s\n", $$1, $$NF}'
+	@echo ""
 	@echo "  LEGACY (fichiers XML) :"
 	@grep -E '^(process-xml|process-unprocessed)' $(MAKEFILE_LIST) | grep '##' | awk -F ':|##' '{printf "    make %-20s %s\n", $$1, $$NF}'
 	@echo ""
@@ -52,7 +55,7 @@ help: ## Affiche cette aide
 	@grep -E '^(validate|metrics):' $(MAKEFILE_LIST) | grep '##' | awk -F ':|##' '{printf "    make %-20s %s\n", $$1, $$NF}'
 	@echo ""
 	@echo "  OUTILS :"
-	@grep -E '^(update-readmes|export-notion|archive|test|clean)' $(MAKEFILE_LIST) | grep '##' | awk -F ':|##' '{printf "    make %-20s %s\n", $$1, $$NF}'
+	@grep -E '^(update-readmes|export-notion|sync-notion|archive|test|clean)' $(MAKEFILE_LIST) | grep '##' | awk -F ':|##' '{printf "    make %-20s %s\n", $$1, $$NF}'
 	@echo ""
 	@echo "  VARIABLES :"
 	@echo "    PROJECTS=SPEX,ACCOUNT    Projets Jira (défaut: $(PROJECTS))"
@@ -64,6 +67,10 @@ help: ## Affiche cette aide
 	@echo "    J=4                      Nombre de workers paralleles (process-all)"
 	@echo "    FORCE=1                  Forcer la synchronisation Xray"
 	@echo "    STRICT=1                 Validation stricte (validate)"
+	@echo "    CONNECTION_TEST_WRITE=1  Inclure test d'écriture (connection-test)"
+	@echo "    TICKET=SPEX-3143         Ticket pour test d'écriture (connection-test)"
+	@echo "    NOTION_API_KEY=...       Secret intégration Notion (sync-notion)"
+	@echo "    NOTION_PARENT_PAGE_ID=... Page racine Doc QA dans Notion (sync-notion)"
 	@echo ""
 
 # ─── Setup ───────────────────────────────────────────────────────────────────
@@ -157,6 +164,10 @@ read-xray-steps: ## Lit les test steps existants depuis Xray (T=TICKET-ID, FORMA
 	fi
 	@node $(CLI_DIR)/dist/cli.js read-xray-steps $(T) $(if $(FORMAT),--format $(FORMAT),)
 
+connection-test: ## Teste la connexion Jira Cloud et Xray (lecture ; CONNECTION_TEST_WRITE=1 et TICKET=KEY pour écriture)
+	@if [ ! -f $(CLI_DIR)/dist/cli.js ]; then $(MAKE) -C $(CLI_DIR) build; fi
+	@bash $(SCRIPTS_DIR)/connection-test.sh $(if $(CONNECTION_TEST_WRITE),--write,) $(if $(TICKET),--ticket $(TICKET),)
+
 # ─── Legacy (XML) ───────────────────────────────────────────────────────────
 
 process-xml: ## Traite un fichier XML Jira (T=chemin/vers/fichier.xml)
@@ -194,6 +205,9 @@ update-readmes: ## Met à jour tous les README des US
 
 export-notion: ## Exporte la documentation vers CSV pour Notion
 	@bash $(SCRIPTS_DIR)/export-to-notion.sh
+
+sync-notion: ## Envoie 01/02/03 vers Notion (Projet → EPIC → US/Bug). NOTION_API_KEY et NOTION_PARENT_PAGE_ID requis.
+	@bash $(SCRIPTS_DIR)/sync-to-notion.sh
 
 archive: ## Archive les traitements anciens selon DAYS
 	@bash $(SCRIPTS_DIR)/archive-treatments.sh --older-than $(DAYS)

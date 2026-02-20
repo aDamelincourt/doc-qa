@@ -35,10 +35,13 @@ Doc QA/
 ├── scripts/                      # Pipeline Bash
 │   ├── qa-pipeline.sh            # Orchestrateur principal (detect, process-all)
 │   ├── process-from-api.sh       # Traitement d'un ticket via API Jira
+│   ├── connection-test.sh         # Test de connexion Jira Cloud et Xray
 │   ├── validate-docs.sh          # Validation de la documentation générée
 │   ├── metrics.sh                # Dashboard de métriques (text, json, markdown)
 │   ├── notify.sh                 # Notifications (console, Slack)
-│   ├── sync-xray.sh              # Synchronisation Xray test steps
+│   ├── sync-xray.sh              # Synchronisation Xray test steps (précédée de validate-docs)
+│   ├── sync-to-notion.sh         # Envoi 01/02/03 vers Notion (Projet → EPIC → US/Bug)
+│   ├── sync-to-notion.js         # Logique Node d’écriture API Notion
 │   └── lib/                      # Bibliothèques Bash partagées
 ├── tests/                        # Tests Bash
 │   ├── run-all-tests.sh          # Runner central
@@ -69,6 +72,10 @@ Doc QA/
 | `JIRA_API_TOKEN`      | Token API Jira (Personal Access Token)          |
 | `XRAY_CLIENT_ID`      | Client ID Xray Cloud (optionnel)                |
 | `XRAY_CLIENT_SECRET`  | Client Secret Xray Cloud (optionnel)            |
+| `NOTION_API_KEY`      | Secret d’intégration Notion (pour `sync-notion`) |
+| `NOTION_PARENT_PAGE_ID` | ID de la page racine Doc QA dans Notion (pour `sync-notion`) |
+
+Pour vérifier les accès Jira et Xray : `make connection-test` (ou `node jira-mcp-server/dist/cli.js connection-test`).
 
 ---
 
@@ -89,6 +96,17 @@ cp jira-mcp-server/.env.example jira-mcp-server/.env
 ---
 
 ## Utilisation
+
+### Ordre de pipeline recommandé
+
+1. **detect** — Lister les tickets Jira sans documentation QA (`make detect`)
+2. **process** — Générer la doc (01, 02, 03) par ticket (`make process T=TICKET`)
+3. **validate** — Valider les documents générés (automatique après process ; ou `make validate D=projets/X/us-NNN`)
+4. **sync-xray** — Envoyer les cas de test et pas de tests vers Xray (la validation est exécutée avant la sync par défaut ; `make sync-xray T=TICKET`)
+5. **sync-notion** — Envoyer 01/02/03 dans Notion avec hiérarchie Projet → EPIC → US/Bug (`make sync-notion`)
+6. **validator** (sous-agent) — En fin de chaîne : revue qualité, refs Jira, bugs/risques (voir [.cursor/agents/](.cursor/agents/)).
+
+Les sous-agents (analyste-req, test-writer, infra-builder, validator) sont décrits dans [.cursor/agents/README.md](.cursor/agents/README.md). Utiliser **validator** en dernier pour vérifier la doc et les références Jira.
 
 ### Pipeline complet (Bash)
 
@@ -160,18 +178,30 @@ Configuration dans `.cursor/mcp.json` :
 
 ## Intégration Xray
 
-Le CLI synchronise les cas de test Markdown vers Xray Cloud :
+Le script `sync-xray.sh` exécute **validate-docs** sur le dossier US avant toute synchronisation (sauf avec `--skip-validate`). Le CLI synchronise ensuite les cas de test Markdown vers Xray Cloud :
 
 1. Parse le fichier `03-cas-test.md` (scénarios, étapes, résultats attendus)
 2. Compare avec les test steps existants dans Xray
 3. Crée / met à jour / supprime les steps pour maintenir la synchronisation
 
 ```bash
-# Synchroniser un ticket
-node dist/cli.js sync-xray SPEX-3143
+# Synchroniser un ticket (validation automatique avant sync)
+make sync-xray T=SPEX-3143
 
 # Vérifier les steps existants
 node dist/cli.js read-xray-steps SPEX-3143
+```
+
+---
+
+## Notion
+
+Le script `sync-to-notion.sh` envoie les contenus 01, 02 et 03 vers Notion avec une hiérarchie **Projet → EPIC (parent Jira) → US/Bug**. Définir `NOTION_API_KEY` et `NOTION_PARENT_PAGE_ID` (page racine partagée avec l’intégration). Les métadonnées projet/EPIC proviennent de `meta.json` (créé par `process-from-api.sh`).
+
+```bash
+make sync-notion
+# ou en dry-run
+bash scripts/sync-to-notion.sh --dry-run
 ```
 
 ---

@@ -42,6 +42,21 @@ if [ -f "$_PROJECT_CONF" ]; then
     done < "$_PROJECT_CONF"
 fi
 
+# ── Charger .env à la racine (secrets, ex. CURSOR_API_KEY) ───────────────────
+# Ne pas écraser les variables déjà définies. Ne pas commiter .env (voir .gitignore).
+_ENV_FILE="$BASE_DIR/.env"
+if [ -f "$_ENV_FILE" ]; then
+    while IFS='=' read -r _key _value; do
+        [[ "$_key" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "$_key" ]] && continue
+        _key=$(echo "$_key" | xargs)
+        _value=$(echo "$_value" | xargs)
+        if [ -z "${!_key+x}" ]; then
+            export "$_key=$_value"
+        fi
+    done < "$_ENV_FILE"
+fi
+
 # ── Chemins ──────────────────────────────────────────────────────────────────
 
 JIRA_DIR="${QA_JIRA_DIR:-$BASE_DIR/${JIRA_SUBDIR:-Jira}}"

@@ -254,6 +254,25 @@ EOF
     log_info "   Copiez le contenu et demandez à l'agent Cursor de générer le document"
 }
 
+# Vérifie si le fichier contient du vrai Markdown QA (et non l'écran de connexion/erreur du CLI).
+# Retourne 0 si valide, 1 si invalide (garbage).
+# Le CLI Cursor en mode non-interactif peut écrire "Press any key to sign in..." ou de l'ASCII art.
+is_valid_qa_markdown_output() {
+    local file="$1"
+    [ ! -f "$file" ] || [ ! -s "$file" ] && return 1
+    # Indices de sortie invalide (écran de connexion, TUI, erreur)
+    if grep -q "Press any key to sign in" "$file" 2>/dev/null; then return 1; fi
+    if grep -q "Cursor Agent" "$file" 2>/dev/null; then return 1; fi
+    if grep -q "Sign in" "$file" 2>/dev/null && ! grep -q "## " "$file" 2>/dev/null; then return 1; fi
+    # Doit ressembler à du Markdown (titres ou listes)
+    if head -50 "$file" | grep -qE '^(#+ |## |\- \*\*|\* )'; then
+        return 0
+    fi
+    # Au moins une section markdown
+    if grep -q "## " "$file" 2>/dev/null; then return 0; fi
+    return 1
+}
+
 # Générer directement avec l'agent Cursor (via CLI ou prompt)
 # Usage: generate_with_cursor_agent "questions" "$context" "$template" "$output"
 generate_with_cursor_agent() {
@@ -261,16 +280,16 @@ generate_with_cursor_agent() {
     local context_data="$2"
     local template_file="$3"
     local output_file="$4"
-    
+
     # Créer un fichier de prompt temporaire
     local prompt_file=$(mktemp)
     prepare_cursor_prompt "$document_type" "$context_data" "$template_file" "$prompt_file"
-    
+
     if [ $? -ne 0 ]; then
         rm -f "$prompt_file"
         return 1
     fi
-    
+
     # Option 3 : Mode mixte — tenter CLI d'abord, puis fallback prompt
     local cursor_cmd=""
     if command -v cursor-agent &> /dev/null; then
@@ -280,24 +299,34 @@ generate_with_cursor_agent() {
     fi
 
     if [ -n "$cursor_cmd" ]; then
-        log_info "🤖 Option 3 (mixte) : utilisation du CLI Cursor pour génération directe..."
-        
-        local prompt_content=$(cat "$prompt_file")
-        local cursor_full_cmd="$cursor_cmd -p --force"
-        if [ -n "${CURSOR_API_KEY:-}" ]; then
-            cursor_full_cmd="$cursor_full_cmd --api-key $CURSOR_API_KEY"
+        if [ -z "${CURSOR_API_KEY:-}" ]; then
+            log_warning "Pour utiliser l'IA Cursor automatiquement, définir CURSOR_API_KEY (voir docs/INSTALLATION-CURSOR-CLI.md). Génération depuis le contexte (extraction-jira.md)."
+            rm -f "$prompt_file"
+            return 1
         fi
-        
+
+        log_info "🤖 Option 3 (mixte) : utilisation du CLI Cursor pour génération directe..."
+
+        local prompt_content=$(cat "$prompt_file")
+        local cursor_full_cmd="$cursor_cmd -p --force --api-key $CURSOR_API_KEY"
+
         log_info "   Génération en cours avec Cursor CLI..."
         if echo "$prompt_content" | $cursor_full_cmd > "$output_file" 2>&1; then
-            log_success "✅ Document généré directement avec Cursor CLI : $output_file"
+            if is_valid_qa_markdown_output "$output_file"; then
+                log_success "✅ Document généré directement avec Cursor CLI : $output_file"
+                rm -f "$prompt_file"
+                return 0
+            fi
+            # Sortie invalide (écran de connexion / erreur écrit dans le fichier)
+            rm -f "$output_file"
+            log_warning "⚠️  Sortie Cursor CLI invalide (écran de connexion ou erreur), bascule vers génération depuis le contexte."
             rm -f "$prompt_file"
-            return 0
+            return 1
         else
             log_warning "⚠️  Erreur avec Cursor CLI, bascule vers mode prompt (fallback)..."
         fi
     fi
-    
+
     # Fallback : mode prompt (pour traitement manuel ou via agent dans conversation)
     log_info "📋 Fichier de prompt créé : $prompt_file"
     log_info ""

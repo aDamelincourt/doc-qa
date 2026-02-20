@@ -8,6 +8,12 @@ Ce guide explique comment installer le CLI Cursor et configurer la clé API pour
 
 Permettre aux scripts d'utiliser directement l'IA Cursor pour générer les documents QA, sans intervention manuelle.
 
+**Utilisation automatique** : l'IA Cursor est utilisée automatiquement par le pipeline lorsque :
+- le CLI est installé (`cursor-agent` ou `cursor` dans le PATH),
+- et `CURSOR_API_KEY` est définie (variable d'environnement ou chargée depuis le fichier `.env` à la racine du projet).
+
+Le pipeline charge `$BASE_DIR/.env` au démarrage (voir [scripts/lib/config.sh](../scripts/lib/config.sh)) ; ne commitez jamais ce fichier (il est dans `.gitignore`).
+
 ---
 
 ## 📋 Installation du CLI Cursor
@@ -88,7 +94,18 @@ Si vous préférez utiliser votre propre clé API :
 
 ## ⚙️ Configuration de la Clé API dans les Scripts
 
-### Méthode 1 : Variable d'environnement (recommandée)
+### Méthode 1 : Fichier .env à la racine du projet (recommandé)
+
+Créer un fichier `.env` à la **racine du projet** (à côté de `README.md`) :
+
+```bash
+# .env (à la racine du projet — ne pas commiter)
+CURSOR_API_KEY=cur_votre_cle_api_ici
+```
+
+Le pipeline charge ce fichier automatiquement via `config.sh`. Aucun export manuel n'est nécessaire.
+
+### Méthode 2 : Variable d'environnement
 
 **Temporaire (session actuelle)** :
 ```bash
@@ -107,23 +124,6 @@ source ~/.bashrc
 ```bash
 echo 'export CURSOR_API_KEY="cur_votre_cle_api_ici"' >> ~/.zshrc
 source ~/.zshrc
-```
-
-### Méthode 2 : Fichier de configuration (plus sécurisé)
-
-Créer un fichier `.env` à la racine du projet :
-
-```bash
-# .env (à la racine du projet)
-CURSOR_API_KEY=cur_votre_cle_api_ici
-```
-
-Puis charger dans les scripts :
-```bash
-# Dans vos scripts, au début
-if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
-fi
 ```
 
 ### Méthode 3 : Fichier de configuration dédié

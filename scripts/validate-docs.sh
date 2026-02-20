@@ -195,8 +195,8 @@ validate_us_directory() {
     echo "--- Fichiers ---"
     validate_file_exists "$us_dir/README.md" "README.md"
     validate_file_exists "$us_dir/extraction-jira.md" "extraction-jira.md"
-    validate_file_exists "$us_dir/01-questions.md" "01-questions.md"
-    validate_file_exists "$us_dir/02-strategie.md" "02-strategie.md"
+    validate_file_exists "$us_dir/01-questions-clarifications.md" "01-questions-clarifications.md"
+    validate_file_exists "$us_dir/02-strategie-test.md" "02-strategie-test.md"
     validate_file_exists "$us_dir/03-cas-test.md" "03-cas-test.md"
 
     # ── 2. Taille des fichiers ───────────────────────────────────────
@@ -204,8 +204,8 @@ validate_us_directory() {
     echo ""
     echo "--- Taille minimale ---"
     validate_file_size "$us_dir/extraction-jira.md" "extraction-jira.md" 100
-    validate_file_size "$us_dir/01-questions.md" "01-questions.md" "$MIN_FILE_SIZE"
-    validate_file_size "$us_dir/02-strategie.md" "02-strategie.md" "$MIN_FILE_SIZE"
+    validate_file_size "$us_dir/01-questions-clarifications.md" "01-questions-clarifications.md" "$MIN_FILE_SIZE"
+    validate_file_size "$us_dir/02-strategie-test.md" "02-strategie-test.md" "$MIN_FILE_SIZE"
     validate_file_size "$us_dir/03-cas-test.md" "03-cas-test.md" "$MIN_FILE_SIZE"
 
     # ── 3. Cohérence du ticket key ───────────────────────────────────
@@ -216,22 +216,22 @@ validate_us_directory() {
     validate_ticket_coherence "$us_dir/extraction-jira.md" "$ticket_key" "extraction-jira.md"
     validate_ticket_coherence "$us_dir/03-cas-test.md" "$ticket_key" "03-cas-test.md"
 
-    # ── 4. Sections dans 01-questions.md ─────────────────────────────
+    # ── 4. Sections dans 01-questions-clarifications.md ───────────────────────
 
-    if [ -f "$us_dir/01-questions.md" ]; then
+    if [ -f "$us_dir/01-questions-clarifications.md" ]; then
         echo ""
-        echo "--- 01-questions.md ---"
-        validate_contains_section "$us_dir/01-questions.md" "^#" "Titre principal"
-        validate_heading_count "$us_dir/01-questions.md" "^\d+\." "$MIN_QUESTIONS" "Questions numérotées"
+        echo "--- 01-questions-clarifications.md ---"
+        validate_contains_section "$us_dir/01-questions-clarifications.md" "^#" "Titre principal"
+        validate_heading_count "$us_dir/01-questions-clarifications.md" "^\d+\." "$MIN_QUESTIONS" "Questions numérotées"
     fi
 
-    # ── 5. Sections dans 02-strategie.md ─────────────────────────────
+    # ── 5. Sections dans 02-strategie-test.md ─────────────────────────────────
 
-    if [ -f "$us_dir/02-strategie.md" ]; then
+    if [ -f "$us_dir/02-strategie-test.md" ]; then
         echo ""
-        echo "--- 02-strategie.md ---"
-        validate_contains_section "$us_dir/02-strategie.md" "^#" "Titre principal"
-        validate_heading_count "$us_dir/02-strategie.md" "^##" "$MIN_SECTIONS_STRATEGY" "Sections H2"
+        echo "--- 02-strategie-test.md ---"
+        validate_contains_section "$us_dir/02-strategie-test.md" "^#" "Titre principal"
+        validate_heading_count "$us_dir/02-strategie-test.md" "^##" "$MIN_SECTIONS_STRATEGY" "Sections H2"
     fi
 
     # ── 6. Scénarios dans 03-cas-test.md ─────────────────────────────
@@ -243,6 +243,16 @@ validate_us_directory() {
         validate_heading_count "$us_dir/03-cas-test.md" "^### Sc[eé]nario" "$MIN_SCENARIOS" "Scénarios de test"
         validate_contains_section "$us_dir/03-cas-test.md" "\*\*[EÉ]tapes?\*\*" "Section étapes"
         validate_contains_section "$us_dir/03-cas-test.md" "\*\*R[eé]sultat" "Section résultat attendu"
+        # Renforcement Xray : vérifier qu'il y a assez de sections Étapes/Résultat par rapport aux scénarios
+        local scenario_count steps_count result_count
+        scenario_count=$(grep -cE '^### Sc[eé]nario\s+' "$us_dir/03-cas-test.md" 2>/dev/null || echo "0")
+        steps_count=$(grep -cE '\*\*[EÉ]tapes?\*\*' "$us_dir/03-cas-test.md" 2>/dev/null || echo "0")
+        result_count=$(grep -cE '\*\*R[eé]sultat' "$us_dir/03-cas-test.md" 2>/dev/null || echo "0")
+        if [ "${scenario_count:-0}" -gt 0 ]; then
+            if [ "${steps_count:-0}" -lt "${scenario_count:-0}" ] || [ "${result_count:-0}" -lt "${scenario_count:-0}" ]; then
+                warn "Certains scénarios pourraient manquer de section Étapes ou Résultat attendu (Xray recommande une par scénario)"
+            fi
+        fi
     fi
 
     # ── Résumé ───────────────────────────────────────────────────────

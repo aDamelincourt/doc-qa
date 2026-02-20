@@ -29,6 +29,7 @@ init_history() {
 
 # Enregistrer un traitement
 # Usage: record_treatment "SPEX-2990" "projets/SPEX/support/us-2990" "2024-01-15"
+# Optionnel (pour Notion / rapports) : export RECORD_PROJECT_KEY, RECORD_PARENT_KEY, RECORD_ISSUE_TYPE avant l'appel
 record_treatment() {
     local ticket_key="$1"
     local us_dir="$2"
@@ -38,10 +39,9 @@ record_treatment() {
     
     # Utiliser Python ou jq si disponible, sinon utiliser sed/awk
     if command -v python3 &> /dev/null; then
-        python3 <<EOF
+        python3 <<PYEOF
 import json
-import sys
-from datetime import datetime
+import os
 
 history_file = "$HISTORY_FILE"
 ticket_key = "$ticket_key"
@@ -54,28 +54,43 @@ try:
 except (FileNotFoundError, json.JSONDecodeError):
     history = {}
 
-history[ticket_key] = {
+entry = {
     "ticket_key": ticket_key,
     "us_dir": us_dir,
     "treatment_date": treatment_date,
     "last_update": treatment_date
 }
+# Métadonnées optionnelles (projet, EPIC, type) pour sync-notion et rapports
+if os.environ.get("RECORD_PROJECT_KEY"):
+    entry["projectKey"] = os.environ.get("RECORD_PROJECT_KEY", "").strip()
+if os.environ.get("RECORD_PARENT_KEY"):
+    entry["parentKey"] = os.environ.get("RECORD_PARENT_KEY", "").strip()
+if os.environ.get("RECORD_ISSUE_TYPE"):
+    entry["issuetype"] = os.environ.get("RECORD_ISSUE_TYPE", "").strip()
+
+history[ticket_key] = entry
 
 with open(history_file, 'w') as f:
     json.dump(history, f, indent=2, ensure_ascii=False)
 
 print(f"✅ Traitement enregistré : {ticket_key}")
-EOF
+PYEOF
     elif command -v jq &> /dev/null; then
         local temp_file=$(mktemp)
         jq --arg key "$ticket_key" \
            --arg dir "$us_dir" \
            --arg date "$treatment_date" \
+           --arg proj "${RECORD_PROJECT_KEY:-}" \
+           --arg parent "${RECORD_PARENT_KEY:-}" \
+           --arg itype "${RECORD_ISSUE_TYPE:-}" \
            '.[$key] = {
              "ticket_key": $key,
              "us_dir": $dir,
              "treatment_date": $date,
-             "last_update": $date
+             "last_update": $date,
+             "projectKey": $proj,
+             "parentKey": $parent,
+             "issuetype": $itype
            }' "$HISTORY_FILE" > "$temp_file" && mv "$temp_file" "$HISTORY_FILE"
         echo "✅ Traitement enregistré : $ticket_key"
     else

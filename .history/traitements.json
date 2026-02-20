@@ -94,5 +94,23 @@
     "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/ACCOUNT/us-2608",
     "treatment_date": "2026-01-07 15:28:40",
     "last_update": "2026-01-07 15:28:40"
+  },
+  "SM-151": {
+    "ticket_key": "SM-151",
+    "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/SM/us-151",
+    "treatment_date": "2026-02-19 14:50:50",
+    "last_update": "2026-02-19 14:50:50"
+  },
+  "SM-172": {
+    "ticket_key": "SM-172",
+    "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/SM/us-172",
+    "treatment_date": "2026-02-19 14:51:13",
+    "last_update": "2026-02-19 14:51:13"
+  },
+  "SM-69": {
+    "ticket_key": "SM-69",
+    "us_dir": "/Users/aDamelincourt/Sites/Doc QA/projets/SM/us-69",
+    "treatment_date": "2026-02-19 14:51:13",
+    "last_update": "2026-02-19 14:51:13"
   }
 }
